@@ -37,7 +37,8 @@ class MainWindow(QMainWindow):
 
         self.sidebar = QToolBar("Sidebar")
         self.sidebar.setObjectName("sidebar")
-        self.addToolBar(Qt.ToolBarArea.RightToolBarArea, self.sidebar)
+        self.sidebar.setMovable(False)
+        self.sidebar.setOrientation(Qt.Orientation.Vertical)
 
         # --- Layout Setup ---
         self.title_bar = CustomTitleBar(self)
@@ -51,13 +52,21 @@ class MainWindow(QMainWindow):
         self.title_bar.layout.insertWidget(0, self.tabs)
         self.title_bar.layout.insertWidget(1, new_tab_button)
 
+        # Content layout (Web view + Sidebar)
+        content_layout = QHBoxLayout()
+        content_layout.setSpacing(0)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.addWidget(self.stack, 1) # Make the stack stretch
+        content_layout.addWidget(self.sidebar)
+
+        # Main layout
         main_layout = QVBoxLayout()
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
         main_layout.addWidget(self.title_bar)
         main_layout.addWidget(self.nav_bar)
-        main_layout.addWidget(self.stack, 1)
+        main_layout.addLayout(content_layout) # Add the content layout
 
         central_widget = QWidget()
         central_widget.setLayout(main_layout)
@@ -65,19 +74,15 @@ class MainWindow(QMainWindow):
 
         # --- Actions and Connections ---
         back_action = QAction("Voltar", self)
-        back_action.triggered.connect(self.navigate_back)
         self.nav_bar.addAction(back_action)
 
         forward_action = QAction("Avançar", self)
-        forward_action.triggered.connect(self.navigate_forward)
         self.nav_bar.addAction(forward_action)
 
         reload_action = QAction("Recarregar", self)
-        reload_action.triggered.connect(self.navigate_reload)
         self.nav_bar.addAction(reload_action)
 
         self.url_bar = QLineEdit()
-        self.url_bar.returnPressed.connect(self.navigate_to_url)
         self.nav_bar.addWidget(self.url_bar)
 
         home_action = QAction(self.style().standardIcon(QStyle.StandardPixmap.SP_DirHomeIcon), "Home", self)
@@ -89,6 +94,12 @@ class MainWindow(QMainWindow):
         settings_action = QAction(self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon), "Settings", self)
         self.sidebar.addAction(settings_action)
 
+        # Connect signals to slots
+        home_action.triggered.connect(self.navigate_home)
+        back_action.triggered.connect(self.navigate_back)
+        forward_action.triggered.connect(self.navigate_forward)
+        reload_action.triggered.connect(self.navigate_reload)
+        self.url_bar.returnPressed.connect(self.navigate_to_url)
         new_tab_button.clicked.connect(lambda: self.add_new_tab())
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
         self.tabs.currentChanged.connect(self.current_tab_changed)
@@ -135,10 +146,14 @@ class MainWindow(QMainWindow):
     def current_tab_changed(self, i):
         if i == -1: return
 
-        widget = self.tabs.tabData(i)["widget"]
-        self.stack.setCurrentWidget(widget)
-        self.update_url_bar(widget.url(), widget)
-        self.update_title(widget)
+        try:
+            widget = self.tabs.tabData(i)["widget"]
+            self.stack.setCurrentWidget(widget)
+            self.update_url_bar(widget.url(), widget)
+            self.update_title(widget)
+        except (KeyError, TypeError):
+            # Tab data might not be set yet during rapid closing
+            pass
 
     def current_browser(self):
         return self.stack.currentWidget()
@@ -149,6 +164,10 @@ class MainWindow(QMainWindow):
         if self.current_browser(): self.current_browser().forward()
     def navigate_reload(self):
         if self.current_browser(): self.current_browser().reload()
+
+    def navigate_home(self):
+        if self.current_browser():
+            self.current_browser().setUrl(QUrl("https://www.google.com"))
 
     def navigate_to_url(self):
         if not self.current_browser(): return

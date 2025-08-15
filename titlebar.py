@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QStyle
 from PyQt6.QtCore import Qt, QPoint
 
 class CustomTitleBar(QWidget):
@@ -11,9 +11,13 @@ class CustomTitleBar(QWidget):
         self.layout.setSpacing(0)
 
         # --- Window Controls ---
-        self.minimize_button = QPushButton("_")
-        self.maximize_button = QPushButton("[]")
-        self.close_button = QPushButton("X")
+        self.minimize_button = QPushButton()
+        self.maximize_button = QPushButton()
+        self.close_button = QPushButton()
+
+        self.minimize_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarMinButton))
+        self.maximize_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarMaxButton))
+        self.close_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarCloseButton))
 
         self.minimize_button.setFixedSize(30, 30)
         self.maximize_button.setFixedSize(30, 30)
