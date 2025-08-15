@@ -25,7 +25,6 @@ class MainWindow(QMainWindow):
 
         # --- Widgets ---
         self.tabs = QTabBar()
-        self.tabs.setExpanding(True)
         self.tabs.setTabsClosable(True)
         self.tabs.setMovable(True)
 
