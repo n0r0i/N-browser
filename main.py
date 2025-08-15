@@ -94,6 +94,12 @@ class MainWindow(QMainWindow):
         self.sidebar_spacer.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.sidebar.addWidget(self.sidebar_spacer)
 
+        favorites_action = QAction(self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton), "Favoritos", self)
+        self.sidebar.addAction(favorites_action)
+
+        downloads_action = QAction(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowDown), "Downloads", self)
+        self.sidebar.addAction(downloads_action)
+
         settings_action = QAction(self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon), "Configurações", self)
         self.sidebar.addAction(settings_action)
 
@@ -160,7 +166,8 @@ class MainWindow(QMainWindow):
                 p.setVisible(False)
         # Uncheck all other actions
         for action in self.sidebar.actions():
-            if action.text() != panel.url().split('.')[0] and action.isCheckable():
+            panel_url_str = panel.url().toString()
+            if action.text() != panel_url_str.split('.')[0] and action.isCheckable():
                 action.setChecked(False)
 
         panel.setVisible(checked)
