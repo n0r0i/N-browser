@@ -9,6 +9,7 @@ from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
 
 from blocker import Blocker, AdBlockerInterceptor
 import qdarkstyle
+from stylesheet import CUSTOM_STYLE
 
 class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
@@ -95,7 +96,7 @@ class MainWindow(QMainWindow):
         self.sidebar.addAction(settings_action)
 
         # Tab management signals
-        new_tab_button.clicked.connect(self.add_new_tab)
+        new_tab_button.clicked.connect(lambda: self.add_new_tab())
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
         self.tabs.currentChanged.connect(self.current_tab_changed)
 
@@ -180,7 +181,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    app.setStyleSheet(qdarkstyle.load_stylesheet())
+    app.setStyleSheet(qdarkstyle.load_stylesheet() + CUSTOM_STYLE)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
