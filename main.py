@@ -113,8 +113,8 @@ class MainWindow(QMainWindow):
 
         idx = self.stack.addWidget(browser)
         i = self.tabs.addTab(label)
-        self.tabs.setCurrentIndex(i)
         self.tabs.setTabData(i, {"widget": browser})
+        self.tabs.setCurrentIndex(i)
 
         page.urlChanged.connect(lambda q, browser=browser: self.update_url_bar(q, browser))
         page.loadFinished.connect(lambda _, i=i, browser=browser: self.update_tab_title(i, browser))
