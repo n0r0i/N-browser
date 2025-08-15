@@ -111,9 +111,14 @@ class MainWindow(QMainWindow):
         browser.setPage(page)
         browser.setUrl(qurl)
 
-        idx = self.stack.addWidget(browser)
+        # Block signals to prevent currentChanged from firing prematurely
+        self.tabs.blockSignals(True)
         i = self.tabs.addTab(label)
         self.tabs.setTabData(i, {"widget": browser})
+        self.stack.addWidget(browser)
+        self.tabs.blockSignals(False)
+
+        # Manually set current index and trigger update
         self.tabs.setCurrentIndex(i)
 
         page.urlChanged.connect(lambda q, browser=browser: self.update_url_bar(q, browser))
