@@ -1,12 +1,13 @@
 import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QToolBar,
                              QLineEdit, QStatusBar, QTabWidget, QWidget)
-from PyQt6.QtCore import QUrl
+from PyQt6.QtCore import QUrl, Qt
 from PyQt6.QtGui import QAction
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
 
 from blocker import Blocker, AdBlockerInterceptor
+from stylesheet import STYLE_SHEET
 
 class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
@@ -52,6 +53,12 @@ class MainWindow(QMainWindow):
         self.url_bar = QLineEdit()
         self.url_bar.returnPressed.connect(self.navigate_to_url)
         nav_bar.addWidget(self.url_bar)
+
+        # Sidebar
+        sidebar = QToolBar("Sidebar")
+        sidebar.setObjectName("sidebar")
+        self.addToolBar(Qt.ToolBarArea.RightToolBarArea, sidebar)
+        sidebar.addAction(QAction("Test", self))
 
         # Tab Widget
         self.tabs = QTabWidget()
@@ -140,6 +147,7 @@ class MainWindow(QMainWindow):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setStyleSheet(STYLE_SHEET)
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
