@@ -1,8 +1,9 @@
 import sys
+import os
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QToolBar,
                              QLineEdit, QStatusBar, QWidget, QVBoxLayout,
                              QPushButton, QStyle, QTabBar, QStackedWidget, QHBoxLayout)
-from PyQt6.QtCore import QUrl, Qt
+from PyQt6.QtCore import QUrl, Qt, QEvent
 from PyQt6.QtGui import QAction
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
@@ -11,6 +12,7 @@ from blocker import Blocker, AdBlockerInterceptor
 import qdarkstyle
 from stylesheet import CUSTOM_STYLE
 from titlebar import CustomTitleBar
+from webpanel import WebPanel
 
 class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
@@ -40,6 +42,8 @@ class MainWindow(QMainWindow):
         self.sidebar.setMovable(False)
         self.sidebar.setOrientation(Qt.Orientation.Vertical)
 
+        self.whatsapp_panel = WebPanel("https://web.whatsapp.com", self)
+
         # --- Layout Setup ---
         self.title_bar = CustomTitleBar(self)
         self.title_bar.minimize_button.clicked.connect(self.showMinimized)
@@ -52,21 +56,19 @@ class MainWindow(QMainWindow):
         self.title_bar.layout.insertWidget(0, self.tabs)
         self.title_bar.layout.insertWidget(1, new_tab_button)
 
-        # Content layout (Web view + Sidebar)
         content_layout = QHBoxLayout()
         content_layout.setSpacing(0)
         content_layout.setContentsMargins(0, 0, 0, 0)
-        content_layout.addWidget(self.stack, 1) # Make the stack stretch
+        content_layout.addWidget(self.stack, 1)
+        content_layout.addWidget(self.whatsapp_panel)
         content_layout.addWidget(self.sidebar)
 
-        # Main layout
         main_layout = QVBoxLayout()
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
-
         main_layout.addWidget(self.title_bar)
         main_layout.addWidget(self.nav_bar)
-        main_layout.addLayout(content_layout) # Add the content layout
+        main_layout.addLayout(content_layout)
 
         central_widget = QWidget()
         central_widget.setLayout(main_layout)
@@ -85,20 +87,20 @@ class MainWindow(QMainWindow):
         self.url_bar = QLineEdit()
         self.nav_bar.addWidget(self.url_bar)
 
-        home_action = QAction(self.style().standardIcon(QStyle.StandardPixmap.SP_DirHomeIcon), "Home", self)
-        self.sidebar.addAction(home_action)
+        sidebar_toggle_action = QAction("Sidebar", self)
+        sidebar_toggle_action.setCheckable(True)
+        sidebar_toggle_action.setChecked(True)
+        self.nav_bar.addAction(sidebar_toggle_action)
 
-        downloads_action = QAction(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowDown), "Downloads", self)
-        self.sidebar.addAction(downloads_action)
-
-        settings_action = QAction(self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon), "Settings", self)
-        self.sidebar.addAction(settings_action)
+        whatsapp_action = QAction("WhatsApp", self) # Placeholder for a real icon
+        self.sidebar.addAction(whatsapp_action)
 
         # Connect signals to slots
-        home_action.triggered.connect(self.navigate_home)
+        whatsapp_action.triggered.connect(self.toggle_whatsapp_panel)
         back_action.triggered.connect(self.navigate_back)
         forward_action.triggered.connect(self.navigate_forward)
         reload_action.triggered.connect(self.navigate_reload)
+        sidebar_toggle_action.triggered.connect(self.toggle_sidebar)
         self.url_bar.returnPressed.connect(self.navigate_to_url)
         new_tab_button.clicked.connect(lambda: self.add_new_tab())
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
@@ -106,14 +108,30 @@ class MainWindow(QMainWindow):
 
         self.add_new_tab()
 
+    def changeEvent(self, event):
+        if event.type() == QEvent.Type.WindowStateChange:
+            if self.isMaximized():
+                self.title_bar.maximize_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarNormalButton))
+            else:
+                self.title_bar.maximize_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_TitleBarMaxButton))
+        super().changeEvent(event)
+
     def toggle_maximize(self):
         if self.isMaximized():
             self.showNormal()
         else:
             self.showMaximized()
 
+    def toggle_sidebar(self, checked):
+        self.sidebar.setVisible(checked)
+
+    def toggle_whatsapp_panel(self):
+        self.whatsapp_panel.setVisible(not self.whatsapp_panel.isVisible())
+
     def add_new_tab(self, qurl=None, label="Nova Aba"):
-        if qurl is None: qurl = QUrl("https://www.google.com")
+        if qurl is None:
+            file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "new_tab_page.html"))
+            qurl = QUrl.fromLocalFile(file_path)
 
         browser = QWebEngineView()
         page = QWebEnginePage(self.profile, browser)
@@ -152,7 +170,6 @@ class MainWindow(QMainWindow):
             self.update_url_bar(widget.url(), widget)
             self.update_title(widget)
         except (KeyError, TypeError):
-            # Tab data might not be set yet during rapid closing
             pass
 
     def current_browser(self):
@@ -167,7 +184,8 @@ class MainWindow(QMainWindow):
 
     def navigate_home(self):
         if self.current_browser():
-            self.current_browser().setUrl(QUrl("https://www.google.com"))
+            file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "new_tab_page.html"))
+            self.current_browser().setUrl(QUrl.fromLocalFile(file_path))
 
     def navigate_to_url(self):
         if not self.current_browser(): return
