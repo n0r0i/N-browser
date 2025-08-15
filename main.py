@@ -21,17 +21,6 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Navegador Leve e Seguro")
         self.setGeometry(100, 100, 1200, 800)
 
-        # Tab Widget
-        self.tabs = QTabWidget()
-        self.tabs.setDocumentMode(True)
-        self.tabs.setTabsClosable(True)
-        self.tabs.tabCloseRequested.connect(self.close_current_tab)
-        self.tabs.currentChanged.connect(self.current_tab_changed)
-        self.setCentralWidget(self.tabs)
-
-        # Add initial tab
-        self.add_new_tab(QUrl("https://www.google.com"), "Página Inicial")
-
         # Status Bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
@@ -63,6 +52,17 @@ class MainWindow(QMainWindow):
         self.url_bar = QLineEdit()
         self.url_bar.returnPressed.connect(self.navigate_to_url)
         nav_bar.addWidget(self.url_bar)
+
+        # Tab Widget
+        self.tabs = QTabWidget()
+        self.tabs.setDocumentMode(True)
+        self.tabs.setTabsClosable(True)
+        self.tabs.tabCloseRequested.connect(self.close_current_tab)
+        self.tabs.currentChanged.connect(self.current_tab_changed)
+        self.setCentralWidget(self.tabs)
+
+        # Add initial tab
+        self.add_new_tab(QUrl("https://www.google.com"), "Página Inicial")
 
     def current_browser(self):
         # The widget in the tab is the QWebEngineView

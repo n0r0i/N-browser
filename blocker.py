@@ -1,7 +1,7 @@
 import requests
 from PyQt6.QtWebEngineCore import QWebEngineUrlRequestInterceptor
 
-BLOCKLIST_URL = "https://justdomains.github.io/blocklists/easylist-justdomains.txt"
+BLOCKLIST_URL = "https://raw.githubusercontent.com/ZingyAwesome/easylists-for-pihole/master/easylist.txt"
 
 class Blocker:
     def __init__(self):
