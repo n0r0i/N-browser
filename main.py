@@ -10,10 +10,12 @@ from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
 from blocker import Blocker, AdBlockerInterceptor
 import qdarkstyle
 from stylesheet import CUSTOM_STYLE
+from titlebar import CustomTitleBar
 
 class MainWindow(QMainWindow):
     def __init__(self, *args, **kwargs):
         super(MainWindow, self).__init__(*args, **kwargs)
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
 
         self.blocker = Blocker()
         self.interceptor = AdBlockerInterceptor(self.blocker)
@@ -38,42 +40,39 @@ class MainWindow(QMainWindow):
         self.addToolBar(Qt.ToolBarArea.RightToolBarArea, self.sidebar)
 
         # --- Layout Setup ---
-        # Tab bar and '+' button
+        self.title_bar = CustomTitleBar(self)
+        self.title_bar.minimize_button.clicked.connect(self.showMinimized)
+        self.title_bar.maximize_button.clicked.connect(self.toggle_maximize)
+        self.title_bar.close_button.clicked.connect(self.close)
+
         new_tab_button = QPushButton("+")
         new_tab_button.setStatusTip("Abrir uma nova aba")
-        tab_bar_layout = QHBoxLayout()
-        tab_bar_layout.setSpacing(0)
-        tab_bar_layout.setContentsMargins(0, 0, 0, 0)
-        tab_bar_layout.addWidget(self.tabs)
-        tab_bar_layout.addWidget(new_tab_button)
 
-        # Main layout
+        self.title_bar.layout.insertWidget(0, self.tabs)
+        self.title_bar.layout.insertWidget(1, new_tab_button)
+
         main_layout = QVBoxLayout()
         main_layout.setSpacing(0)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        main_layout.addLayout(tab_bar_layout)
+        main_layout.addWidget(self.title_bar)
         main_layout.addWidget(self.nav_bar)
-        main_layout.addWidget(self.stack, 1) # Add stack and make it stretch
+        main_layout.addWidget(self.stack, 1)
 
         central_widget = QWidget()
         central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
 
         # --- Actions and Connections ---
-        # Nav Bar Actions
         back_action = QAction("Voltar", self)
-        back_action.setStatusTip("Voltar para a página anterior")
         back_action.triggered.connect(self.navigate_back)
         self.nav_bar.addAction(back_action)
 
         forward_action = QAction("Avançar", self)
-        forward_action.setStatusTip("Avançar para a próxima página")
         forward_action.triggered.connect(self.navigate_forward)
         self.nav_bar.addAction(forward_action)
 
         reload_action = QAction("Recarregar", self)
-        reload_action.setStatusTip("Recarregar a página atual")
         reload_action.triggered.connect(self.navigate_reload)
         self.nav_bar.addAction(reload_action)
 
@@ -81,44 +80,41 @@ class MainWindow(QMainWindow):
         self.url_bar.returnPressed.connect(self.navigate_to_url)
         self.nav_bar.addWidget(self.url_bar)
 
-        # Sidebar Actions
         home_action = QAction(self.style().standardIcon(QStyle.StandardPixmap.SP_DirHomeIcon), "Home", self)
-        home_action.setStatusTip("Go home")
         self.sidebar.addAction(home_action)
 
         downloads_action = QAction(self.style().standardIcon(QStyle.StandardPixmap.SP_ArrowDown), "Downloads", self)
-        downloads_action.setStatusTip("View downloads")
         self.sidebar.addAction(downloads_action)
 
         settings_action = QAction(self.style().standardIcon(QStyle.StandardPixmap.SP_ComputerIcon), "Settings", self)
-        settings_action.setStatusTip("View settings")
         self.sidebar.addAction(settings_action)
 
-        # Tab management signals
         new_tab_button.clicked.connect(lambda: self.add_new_tab())
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
         self.tabs.currentChanged.connect(self.current_tab_changed)
 
-        # Add initial tab
         self.add_new_tab()
 
+    def toggle_maximize(self):
+        if self.isMaximized():
+            self.showNormal()
+        else:
+            self.showMaximized()
+
     def add_new_tab(self, qurl=None, label="Nova Aba"):
-        if qurl is None:
-            qurl = QUrl("https://www.google.com")
+        if qurl is None: qurl = QUrl("https://www.google.com")
 
         browser = QWebEngineView()
         page = QWebEnginePage(self.profile, browser)
         browser.setPage(page)
         browser.setUrl(qurl)
 
-        # Block signals to prevent currentChanged from firing prematurely
         self.tabs.blockSignals(True)
         i = self.tabs.addTab(label)
         self.tabs.setTabData(i, {"widget": browser})
         self.stack.addWidget(browser)
         self.tabs.blockSignals(False)
 
-        # Manually set current index and trigger update
         self.tabs.setCurrentIndex(i)
 
         page.urlChanged.connect(lambda q, browser=browser: self.update_url_bar(q, browser))
@@ -129,18 +125,15 @@ class MainWindow(QMainWindow):
         self.tabs.setTabText(i, title)
 
     def close_current_tab(self, i):
-        if self.tabs.count() < 2:
-            self.close()
-            return
-
-        widget_to_remove = self.tabs.tabData(i)["widget"]
-        self.stack.removeWidget(widget_to_remove)
-        widget_to_remove.deleteLater()
-        self.tabs.removeTab(i)
+        if self.tabs.count() < 2: self.close()
+        else:
+            widget_to_remove = self.tabs.tabData(i)["widget"]
+            self.stack.removeWidget(widget_to_remove)
+            widget_to_remove.deleteLater()
+            self.tabs.removeTab(i)
 
     def current_tab_changed(self, i):
-        if i == -1: # No tabs left
-             return
+        if i == -1: return
 
         widget = self.tabs.tabData(i)["widget"]
         self.stack.setCurrentWidget(widget)
@@ -169,14 +162,10 @@ class MainWindow(QMainWindow):
         self.url_bar.setCursorPosition(0)
 
     def update_title(self, browser=None):
-        if not browser:
-            browser = self.current_browser()
+        if not browser: browser = self.current_browser()
 
-        if browser:
-            title = browser.page().title()
-            self.setWindowTitle(f"{title} - Navegador Leve e Seguro")
-        else:
-            self.setWindowTitle("Navegador Leve e Seguro")
+        if browser: self.setWindowTitle(f"{browser.page().title()} - Navegador Leve e Seguro")
+        else: self.setWindowTitle("Navegador Leve e Seguro")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
