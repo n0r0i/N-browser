@@ -4,7 +4,7 @@ import requests
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QToolBar,
                              QLineEdit, QStatusBar, QWidget, QVBoxLayout,
                              QPushButton, QStyle, QTabBar, QStackedWidget, QHBoxLayout,
-                             QSizePolicy, QInputDialog)
+                             QSizePolicy, QInputDialog, QMenu)
 from PyQt6.QtCore import QUrl, Qt, QEvent
 from PyQt6.QtGui import QAction, QIcon, QPixmap
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
         self.nav_bar = QToolBar("Navegação")
         self.nav_bar.setObjectName("navigation_bar")
 
-        self.sidebar = SidebarToolBar("Sidebar") # Use custom toolbar
+        self.sidebar = SidebarToolBar("Sidebar")
         self.sidebar.setObjectName("sidebar")
         self.sidebar.setMovable(False)
         self.sidebar.setOrientation(Qt.Orientation.Vertical)
@@ -78,14 +78,12 @@ class MainWindow(QMainWindow):
         self.add_new_tab()
 
     def setup_actions(self):
-        # ... (Nav Bar setup remains the same)
         back_action = QAction("Voltar", self); self.nav_bar.addAction(back_action)
         forward_action = QAction("Avançar", self); self.nav_bar.addAction(forward_action)
         reload_action = QAction("Recarregar", self); self.nav_bar.addAction(reload_action)
         self.url_bar = QLineEdit(); self.nav_bar.addWidget(self.url_bar)
         sidebar_toggle_action = QAction("Sidebar", self); sidebar_toggle_action.setCheckable(True); sidebar_toggle_action.setChecked(True); self.nav_bar.addAction(sidebar_toggle_action)
 
-        # Sidebar
         self.add_panel_action = QAction("+", self)
         self.sidebar.addAction(self.add_panel_action)
 
@@ -106,7 +104,7 @@ class MainWindow(QMainWindow):
         self.url_bar.returnPressed.connect(self.navigate_to_url)
         sidebar_toggle_action.triggered.connect(self.toggle_sidebar)
         self.add_panel_action.triggered.connect(self.add_new_web_panel_dialog)
-        self.sidebar.actionMiddleClicked.connect(self.on_panel_middle_click) # Connect custom signal
+        self.sidebar.actionContextMenuRequested.connect(self.show_panel_context_menu)
         self.tabs.tabCloseRequested.connect(self.close_current_tab)
         self.tabs.currentChanged.connect(self.current_tab_changed)
         self.title_bar.minimize_button.clicked.connect(self.showMinimized)
@@ -114,10 +112,25 @@ class MainWindow(QMainWindow):
         self.title_bar.close_button.clicked.connect(self.close)
         self.title_bar.findChild(QPushButton).clicked.connect(lambda: self.add_new_tab())
 
-    def on_panel_middle_click(self, action):
+    def show_panel_context_menu(self, action, pos):
         panel = action.data()
-        if panel and isinstance(panel, WebPanel):
-            panel.toggle_user_agent()
+        if not (panel and isinstance(panel, WebPanel)):
+            return
+
+        menu = QMenu(self)
+        desktop_action = menu.addAction("Ver como Desktop")
+        mobile_action = menu.addAction("Ver como Celular")
+
+        selected_action = menu.exec(pos)
+
+        if selected_action == desktop_action:
+            panel.is_mobile = False
+            panel.set_user_agent()
+            panel.reload()
+        elif selected_action == mobile_action:
+            panel.is_mobile = True
+            panel.set_user_agent()
+            panel.reload()
 
     def changeEvent(self, event):
         if event.type() == QEvent.Type.WindowStateChange:
@@ -157,7 +170,7 @@ class MainWindow(QMainWindow):
 
         action = QAction(icon, url, self)
         action.setCheckable(True)
-        action.setData(panel) # Store reference to the panel
+        action.setData(panel)
         action.triggered.connect(lambda checked, p=panel: self.toggle_web_panel(p, checked))
 
         self.sidebar.insertAction(self.add_panel_action, action)

@@ -2,11 +2,10 @@ from PyQt6.QtWidgets import QToolBar
 from PyQt6.QtCore import pyqtSignal, Qt
 
 class SidebarToolBar(QToolBar):
-    actionMiddleClicked = pyqtSignal(object)
+    actionContextMenuRequested = pyqtSignal(object, object) # action, global_pos
 
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.MiddleButton:
-            action = self.actionAt(event.pos())
-            if action:
-                self.actionMiddleClicked.emit(action)
-        super().mousePressEvent(event)
+    def contextMenuEvent(self, event):
+        action = self.actionAt(event.pos())
+        if action:
+            self.actionContextMenuRequested.emit(action, event.globalPos())
+        super().contextMenuEvent(event)
