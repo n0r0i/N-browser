@@ -56,6 +56,9 @@ class MainWindow(QMainWindow):
         self.title_bar.layout.insertWidget(0, self.tabs)
         self.title_bar.layout.insertWidget(1, new_tab_button)
 
+        # Connect the new tab button's signal here
+        new_tab_button.clicked.connect(lambda: self.add_new_tab())
+
         self.content_layout = QHBoxLayout()
         self.content_layout.setSpacing(0)
         self.content_layout.setContentsMargins(0, 0, 0, 0)
@@ -110,7 +113,6 @@ class MainWindow(QMainWindow):
         self.title_bar.minimize_button.clicked.connect(self.showMinimized)
         self.title_bar.maximize_button.clicked.connect(self.toggle_maximize)
         self.title_bar.close_button.clicked.connect(self.close)
-        self.title_bar.findChild(QPushButton).clicked.connect(lambda: self.add_new_tab())
 
     def show_panel_context_menu(self, action, pos):
         panel = action.data()
@@ -164,7 +166,7 @@ class MainWindow(QMainWindow):
             self.add_web_panel(url, icon)
 
     def add_web_panel(self, url, icon):
-        panel = WebPanel(url, self)
+        panel = WebPanel(url, self.profile, self)
         self.web_panels.append(panel)
         self.content_layout.insertWidget(self.content_layout.indexOf(self.sidebar) + 1, panel)
 
