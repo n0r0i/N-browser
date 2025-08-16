@@ -10,8 +10,9 @@ class WebPanel(QWebEngineView):
         self.page_profile = profile
         self.setPage(QWebEnginePage(self.page_profile, self))
 
-        self.is_mobile = True # Start as mobile by default
-        self.desktop_user_agent = self.page_profile.httpUserAgent()
+        self.is_mobile = False # Start as desktop by default
+        # The default desktop user agent is an empty string, which tells WebEngine to use the default.
+        self.desktop_user_agent = ""
         self.mobile_user_agent = "Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.106 Mobile Safari/537.36"
 
         self.set_user_agent()
