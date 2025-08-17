@@ -31,7 +31,7 @@ def get_history():
     try:
         con = sqlite3.connect(DB_FILE)
         cur = con.cursor()
-        cur.execute("SELECT url, title, timestamp FROM history ORDER BY timestamp DESC")
+        cur.execute("SELECT id, url, title, timestamp FROM history ORDER BY timestamp DESC")
         history = cur.fetchall()
         con.close()
         return history
@@ -39,18 +39,40 @@ def get_history():
         print(f"Erro ao buscar histórico: {e}")
         return []
 
-def get_favorites():
-    """Retrieves all favorite entries."""
+def delete_history_entry(entry_id):
+    """Deletes a specific entry from the history table."""
     try:
         con = sqlite3.connect(DB_FILE)
         cur = con.cursor()
-        cur.execute("SELECT url, title FROM favorites ORDER BY title ASC")
+        cur.execute("DELETE FROM history WHERE id = ?", (entry_id,))
+        con.commit()
+        con.close()
+    except sqlite3.Error as e:
+        print(f"Erro ao deletar do histórico: {e}")
+
+def get_favorites():
+    """Retrievels all favorite entries."""
+    try:
+        con = sqlite3.connect(DB_FILE)
+        cur = con.cursor()
+        cur.execute("SELECT id, url, title FROM favorites ORDER BY title ASC")
         favorites = cur.fetchall()
         con.close()
         return favorites
     except sqlite3.Error as e:
         print(f"Erro ao buscar favoritos: {e}")
         return []
+
+def delete_favorite_entry(entry_id):
+    """Deletes a specific entry from the favorites table."""
+    try:
+        con = sqlite3.connect(DB_FILE)
+        cur = con.cursor()
+        cur.execute("DELETE FROM favorites WHERE id = ?", (entry_id,))
+        con.commit()
+        con.close()
+    except sqlite3.Error as e:
+        print(f"Erro ao deletar dos favoritos: {e}")
 
 def init_db():
     """Initializes the database and creates tables if they don't exist."""

@@ -6,7 +6,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QToolBar,
                              QLineEdit, QStatusBar, QWidget, QVBoxLayout,
                              QPushButton, QStyle, QTabBar, QStackedWidget, QHBoxLayout,
                              QSizePolicy, QInputDialog, QMenu)
-from PyQt6.QtCore import QUrl, Qt, QEvent
+from PyQt6.QtCore import QUrl, Qt, QEvent, QUrlQuery
 from PyQt6.QtGui import QAction, QIcon, QPixmap
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
@@ -20,18 +20,38 @@ class AppAwareWebEnginePage(QWebEnginePage):
 
     def acceptNavigationRequest(self, url, _type, isMainFrame):
         if isMainFrame and url.scheme() == 'app':
-            if url.path() == 'clear_history':
+            query = QUrlQuery(url)
+            path = url.path()
+
+            if path == 'clear_history':
                 database.clear_history()
                 history_data = database.get_history()
-                path = self.main_window.generate_page_from_template("Histórico", history_data, "history")
-                self.setUrl(QUrl.fromLocalFile(path))
+                new_path = self.main_window.generate_page_from_template("Histórico", history_data, "history")
+                self.setUrl(QUrl.fromLocalFile(new_path))
                 return False
-            elif url.path() == 'clear_favorites':
+            elif path == 'clear_favorites':
                 database.clear_favorites()
                 favorites_data = database.get_favorites()
-                path = self.main_window.generate_page_from_template("Favoritos", favorites_data, "favorites")
-                self.setUrl(QUrl.fromLocalFile(path))
+                new_path = self.main_window.generate_page_from_template("Favoritos", favorites_data, "favorites")
+                self.setUrl(QUrl.fromLocalFile(new_path))
                 return False
+            elif path == 'delete_history':
+                entry_id = query.queryItemValue("id")
+                if entry_id:
+                    database.delete_history_entry(int(entry_id))
+                    history_data = database.get_history()
+                    new_path = self.main_window.generate_page_from_template("Histórico", history_data, "history")
+                    self.setUrl(QUrl.fromLocalFile(new_path))
+                return False
+            elif path == 'delete_favorite':
+                entry_id = query.queryItemValue("id")
+                if entry_id:
+                    database.delete_favorite_entry(int(entry_id))
+                    favorites_data = database.get_favorites()
+                    new_path = self.main_window.generate_page_from_template("Favoritos", favorites_data, "favorites")
+                    self.setUrl(QUrl.fromLocalFile(new_path))
+                return False
+
         return super().acceptNavigationRequest(url, _type, isMainFrame)
 import qdarkstyle
 from stylesheet import CUSTOM_STYLE
@@ -51,6 +71,7 @@ class MainWindow(QMainWindow):
         self.blocker = Blocker()
         self.interceptor = AdBlockerInterceptor(self.blocker)
         self.profile = QWebEngineProfile.defaultProfile()
+        self.profile.setHttpUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36")
         self.profile.setUrlRequestInterceptor(self.interceptor)
 
         self.setWindowTitle("Navegador Leve e Seguro")
@@ -255,12 +276,15 @@ class MainWindow(QMainWindow):
         with open("template.html", "r") as f: template = f.read()
 
         list_items = ""
+        delete_style = "color: #ff4444; text-decoration: none; margin-left: 15px;"
         if template_name == "history":
             for row in data:
-                list_items += f'<li><a href="{row[0]}">{row[1]}</a><span class="timestamp">{row[2]}</span></li>'
+                # row is (id, url, title, timestamp)
+                list_items += f'<li><a href="{row[1]}">{row[2]}</a><span class="timestamp">{row[3]}</span><a href="app:delete_history?id={row[0]}" style="{delete_style}">[Excluir]</a></li>'
         else: # favorites
             for row in data:
-                list_items += f'<li><a href="{row[0]}">{row[1]}</a></li>'
+                # row is (id, url, title)
+                list_items += f'<li><a href="{row[1]}">{row[2]}</a><a href="app:delete_favorite?id={row[0]}" style="{delete_style}">[Excluir]</a></li>'
 
         final_html = template.replace("{{TITLE}}", title).replace("{{CONTENT}}", list_items)
 
