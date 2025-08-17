@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QToolBar,
 from PyQt6.QtCore import QUrl, Qt, QEvent, QUrlQuery
 from PyQt6.QtGui import QAction, QIcon, QPixmap
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
+from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage, QWebEngineSettings
 
 from blocker import Blocker, AdBlockerInterceptor
 
