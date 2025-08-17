@@ -1,5 +1,10 @@
 import sys
 import os
+
+# Set the path to the Widevine CDM library.
+# This must be done *before* any Qt modules are imported.
+os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = '--widevine-path=/opt/google/chrome/WidevineCdm/_platform_specific/linux_x64/libwidevinecdm.so'
+
 import requests
 from urllib.parse import quote_plus
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QToolBar,
@@ -79,6 +84,7 @@ class MainWindow(QMainWindow):
         self.interceptor = AdBlockerInterceptor(self.blocker)
         self.profile = QWebEngineProfile.defaultProfile()
         self.profile.setHttpUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36")
+        self.profile.settings().setAttribute(QWebEngineSettings.WebAttribute.PluginsEnabled, True)
         self.profile.setUrlRequestInterceptor(self.interceptor)
 
         self.setWindowTitle("Navegador Leve e Seguro")
