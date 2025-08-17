@@ -77,11 +77,75 @@ def init_db():
             )
         """)
 
+        # Create web_panels table
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS web_panels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                url TEXT NOT NULL UNIQUE
+            )
+        """)
+
         con.commit()
         con.close()
-        print("Banco de dados inicializado com sucesso.")
     except sqlite3.Error as e:
         print(f"Erro ao inicializar o banco de dados: {e}")
+
+def add_panel(url):
+    """Adds a new web panel URL to the database."""
+    try:
+        con = sqlite3.connect(DB_FILE)
+        cur = con.cursor()
+        cur.execute("INSERT OR IGNORE INTO web_panels (url) VALUES (?)", (url,))
+        con.commit()
+        con.close()
+    except sqlite3.Error as e:
+        print(f"Erro ao adicionar painel: {e}")
+
+def remove_panel(url):
+    """Removes a web panel URL from the database."""
+    try:
+        con = sqlite3.connect(DB_FILE)
+        cur = con.cursor()
+        cur.execute("DELETE FROM web_panels WHERE url = ?", (url,))
+        con.commit()
+        con.close()
+    except sqlite3.Error as e:
+        print(f"Erro ao remover painel: {e}")
+
+def get_panels():
+    """Retrieves all saved web panel URLs."""
+    try:
+        con = sqlite3.connect(DB_FILE)
+        cur = con.cursor()
+        cur.execute("SELECT url FROM web_panels ORDER BY id")
+        panels = cur.fetchall()
+        con.close()
+        return [row[0] for row in panels] # Return a simple list of URLs
+    except sqlite3.Error as e:
+        print(f"Erro ao buscar painéis: {e}")
+        return []
+
+def clear_history():
+    """Deletes all entries from the history table."""
+    try:
+        con = sqlite3.connect(DB_FILE)
+        cur = con.cursor()
+        cur.execute("DELETE FROM history")
+        con.commit()
+        con.close()
+    except sqlite3.Error as e:
+        print(f"Erro ao limpar histórico: {e}")
+
+def clear_favorites():
+    """Deletes all entries from the favorites table."""
+    try:
+        con = sqlite3.connect(DB_FILE)
+        cur = con.cursor()
+        cur.execute("DELETE FROM favorites")
+        con.commit()
+        con.close()
+    except sqlite3.Error as e:
+        print(f"Erro ao limpar favoritos: {e}")
 
 if __name__ == '__main__':
     # Allows running this file directly to create the DB

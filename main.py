@@ -12,6 +12,27 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
 
 from blocker import Blocker, AdBlockerInterceptor
+
+class AppAwareWebEnginePage(QWebEnginePage):
+    def __init__(self, profile, parent=None, main_window=None):
+        super().__init__(profile, parent)
+        self.main_window = main_window
+
+    def acceptNavigationRequest(self, url, _type, isMainFrame):
+        if isMainFrame and url.scheme() == 'app':
+            if url.path() == 'clear_history':
+                database.clear_history()
+                history_data = database.get_history()
+                path = self.main_window.generate_page_from_template("Histórico", history_data, "history")
+                self.setUrl(QUrl.fromLocalFile(path))
+                return False
+            elif url.path() == 'clear_favorites':
+                database.clear_favorites()
+                favorites_data = database.get_favorites()
+                path = self.main_window.generate_page_from_template("Favoritos", favorites_data, "favorites")
+                self.setUrl(QUrl.fromLocalFile(path))
+                return False
+        return super().acceptNavigationRequest(url, _type, isMainFrame)
 import qdarkstyle
 from stylesheet import CUSTOM_STYLE
 from titlebar import CustomTitleBar
@@ -57,6 +78,7 @@ class MainWindow(QMainWindow):
         central_widget = QWidget(); central_widget.setLayout(main_layout); self.setCentralWidget(central_widget)
 
         self.setup_actions()
+        self.load_panels()
         self.add_new_tab()
 
     def setup_actions(self):
@@ -90,15 +112,41 @@ class MainWindow(QMainWindow):
         self.title_bar.minimize_button.clicked.connect(self.showMinimized)
         self.title_bar.maximize_button.clicked.connect(self.toggle_maximize)
         self.title_bar.close_button.clicked.connect(self.close)
-        self.new_tab_button.clicked.connect(self.add_new_tab)
+        self.new_tab_button.clicked.connect(self.handle_new_tab_button_click)
+
+    def handle_new_tab_button_click(self, checked=False):
+        self.add_new_tab()
 
     def show_panel_context_menu(self, action, pos):
         panel = action.data()
         if not (panel and isinstance(panel, WebPanel)): return
-        menu = QMenu(self); desktop_action = menu.addAction("Ver como Desktop"); mobile_action = menu.addAction("Ver como Celular")
+
+        menu = QMenu(self)
+        desktop_action = menu.addAction("Ver como Desktop")
+        mobile_action = menu.addAction("Ver como Celular")
+        menu.addSeparator()
+        remove_action = menu.addAction("Remover Painel")
+
         selected_action = menu.exec(pos)
-        if selected_action == desktop_action: panel.is_mobile = False; panel.set_user_agent(); panel.reload()
-        elif selected_action == mobile_action: panel.is_mobile = True; panel.set_user_agent(); panel.reload()
+
+        if selected_action == desktop_action:
+            panel.is_mobile = False; panel.set_user_agent(); panel.reload()
+        elif selected_action == mobile_action:
+            panel.is_mobile = True; panel.set_user_agent(); panel.reload()
+        elif selected_action == remove_action:
+            self.remove_web_panel(action)
+
+    def remove_web_panel(self, action):
+        panel = action.data()
+        if not panel: return
+
+        # Remove from database
+        database.remove_panel(panel.url().toString())
+
+        # Remove from UI
+        self.sidebar.removeAction(action)
+        self.web_panels.remove(panel)
+        panel.deleteLater()
 
     def changeEvent(self, event):
         if event.type() == QEvent.Type.WindowStateChange:
@@ -120,6 +168,7 @@ class MainWindow(QMainWindow):
     def add_new_web_panel_dialog(self):
         url, ok = QInputDialog.getText(self, "Adicionar Painel", "Digite a URL do site:")
         if ok and url:
+            database.add_panel(url) # Save to database
             favicon_url = get_favicon_url(url); icon = QIcon()
             if favicon_url:
                 try:
@@ -144,9 +193,27 @@ class MainWindow(QMainWindow):
             if action.data() != panel and action.isCheckable(): action.setChecked(False)
         panel.setVisible(checked)
 
+    def load_panels(self):
+        urls = database.get_panels()
+        for url in urls:
+            favicon_url = get_favicon_url(url)
+            icon = QIcon()
+            if favicon_url:
+                try:
+                    data = requests.get(favicon_url, timeout=5).content
+                    pixmap = QPixmap()
+                    pixmap.loadFromData(data)
+                    icon = QIcon(pixmap)
+                except Exception as e:
+                    print(f"Failed to load favicon for saved panel: {e}")
+            self.add_web_panel(url, icon)
+
     def add_new_tab(self, qurl=None, label="Nova Aba"):
         if qurl is None: qurl = QUrl.fromLocalFile(os.path.abspath(os.path.join(os.path.dirname(__file__), "new_tab_page.html")))
-        browser = QWebEngineView(); page = QWebEnginePage(self.profile, browser); browser.setPage(page); browser.setUrl(qurl)
+        browser = QWebEngineView()
+        page = AppAwareWebEnginePage(self.profile, browser, main_window=self)
+        browser.setPage(page)
+        browser.setUrl(qurl)
         self.tabs.blockSignals(True)
         i = self.tabs.addTab(label); self.tabs.setTabData(i, {"widget": browser}); self.stack.addWidget(browser); self.tabs.blockSignals(False)
         self.tabs.setCurrentIndex(i)
