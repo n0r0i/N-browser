@@ -20,16 +20,19 @@ class AppAwareWebEnginePage(QWebEnginePage):
 
     def acceptNavigationRequest(self, url, _type, isMainFrame):
         if isMainFrame and url.scheme() == 'app':
+            print(f"[DEBUG] Intercepted app URL: {url.toString()}")
             query = QUrlQuery(url)
             path = url.path()
 
             if path == 'clear_history':
+                print("[DEBUG] Path matched 'clear_history'")
                 database.clear_history()
                 history_data = database.get_history()
                 new_path = self.main_window.generate_page_from_template("Histórico", history_data, "history")
                 self.setUrl(QUrl.fromLocalFile(new_path))
                 return False
             elif path == 'clear_favorites':
+                print("[DEBUG] Path matched 'clear_favorites'")
                 database.clear_favorites()
                 favorites_data = database.get_favorites()
                 new_path = self.main_window.generate_page_from_template("Favoritos", favorites_data, "favorites")
@@ -37,7 +40,9 @@ class AppAwareWebEnginePage(QWebEnginePage):
                 return False
             elif path == 'delete_history':
                 entry_id = query.queryItemValue("id")
+                print(f"[DEBUG] Path matched 'delete_history', ID: {entry_id}")
                 if entry_id:
+                    print(f"[DEBUG] Deleting history entry with ID: {entry_id}")
                     database.delete_history_entry(int(entry_id))
                     history_data = database.get_history()
                     new_path = self.main_window.generate_page_from_template("Histórico", history_data, "history")
@@ -45,7 +50,9 @@ class AppAwareWebEnginePage(QWebEnginePage):
                 return False
             elif path == 'delete_favorite':
                 entry_id = query.queryItemValue("id")
+                print(f"[DEBUG] Path matched 'delete_favorite', ID: {entry_id}")
                 if entry_id:
+                    print(f"[DEBUG] Deleting favorite entry with ID: {entry_id}")
                     database.delete_favorite_entry(int(entry_id))
                     favorites_data = database.get_favorites()
                     new_path = self.main_window.generate_page_from_template("Favoritos", favorites_data, "favorites")
@@ -280,11 +287,11 @@ class MainWindow(QMainWindow):
         if template_name == "history":
             for row in data:
                 # row is (id, url, title, timestamp)
-                list_items += f'<li><a href="{row[1]}">{row[2]}</a><span class="timestamp">{row[3]}</span><a href="app:delete_history?id={row[0]}" style="{delete_style}">[Excluir]</a></li>'
+                list_items += f'<li><a href="{row[1]}">{row[2]}</a><span class="timestamp">{row[3]}</span><a href="app:delete_history?id={row[0]}" style="{delete_style}">Excluir</a></li>'
         else: # favorites
             for row in data:
                 # row is (id, url, title)
-                list_items += f'<li><a href="{row[1]}">{row[2]}</a><a href="app:delete_favorite?id={row[0]}" style="{delete_style}">[Excluir]</a></li>'
+                list_items += f'<li><a href="{row[1]}">{row[2]}</a><a href="app:delete_favorite?id={row[0]}" style="{delete_style}">Excluir</a></li>'
 
         final_html = template.replace("{{TITLE}}", title).replace("{{CONTENT}}", list_items)
 
