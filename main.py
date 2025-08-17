@@ -1,9 +1,43 @@
 import sys
 import os
 
-# Set the path to the Widevine CDM library.
-# This must be done *before* any Qt modules are imported.
-os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = '--widevine-path=/opt/google/chrome/WidevineCdm/_platform_specific/linux_x64/libwidevinecdm.so'
+def _find_widevine_cdm_windows():
+    """Searches for the Widevine CDM DLL in common Chrome installation locations."""
+    possible_paths = [
+        os.environ.get("ProgramFiles(x86)"),
+        os.environ.get("ProgramFiles"),
+        os.path.join(os.environ.get("LOCALAPPDATA", ""), "Google\\Chrome")
+    ]
+    for path in filter(None, possible_paths):
+        try:
+            for root, _, files in os.walk(path):
+                if "widevinecdm.dll" in files:
+                    return os.path.join(root, "widevinecdm.dll")
+        except Exception as e:
+            print(f"[DEBUG] Error searching in {path}: {e}")
+    return None
+
+def _setup_drm():
+    """Sets up the Widevine DRM path based on the operating system."""
+    if sys.platform == 'win32':
+        widevine_path = _find_widevine_cdm_windows()
+        if widevine_path:
+            # On Windows, the path needs to be quoted and use forward slashes for the flag.
+            widevine_path_str = widevine_path.replace('\\', '/')
+            print(f"[INFO] Found Widevine CDM at: {widevine_path_str}")
+            os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = f'--widevine-path="{widevine_path_str}"'
+        else:
+            print("[WARNING] Widevine CDM not found. DRM-protected content may not play. Please ensure Google Chrome is installed.")
+    elif sys.platform.startswith('linux'):
+        widevine_path = '/opt/google/chrome/WidevineCdm/_platform_specific/linux_x64/libwidevinecdm.so'
+        if os.path.exists(widevine_path):
+            print(f"[INFO] Found Widevine CDM at: {widevine_path}")
+            os.environ['QTWEBENGINE_CHROMIUM_FLAGS'] = f'--widevine-path={widevine_path}'
+        else:
+            print("[WARNING] Widevine CDM not found at expected path. DRM-protected content may not play. Please run the 'latest-widevine.sh' script with sudo.")
+
+# Set up DRM before importing any Qt modules.
+_setup_drm()
 
 import requests
 from urllib.parse import quote_plus
