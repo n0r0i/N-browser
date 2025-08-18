@@ -155,3 +155,56 @@ webview {
 .close-tab-button:hover {
     background-color: #6f6f6f;
 }
+
+/* --- Refinements for Modern Look --- */
+
+/* General Transitions */
+.control-button, .nav-button, .tab, .close-tab-button {
+    transition: background-color 0.2s ease-in-out;
+}
+
+/* Tab Appearance */
+.tab {
+    padding: 0 10px 0 15px; /* More space on the left */
+    max-width: 200px; /* Prevent tabs from getting too wide */
+    min-width: 60px;
+    justify-content: space-between;
+    border-top: 2px solid transparent;
+}
+
+.tab.active {
+    background-color: #2b2b2b; /* Make active tab same as body */
+    border-top: 2px solid #00aaff; /* Highlight with a blue top border */
+}
+
+.tab-title {
+    padding-right: 5px; /* Space between title and close button */
+}
+
+.close-tab-button {
+    font-size: 12px;
+    padding: 2px 5px;
+    line-height: 1;
+}
+
+/* Button & Icon Alignment */
+.nav-button, .control-button {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Make Add Tab button less prominent */
+#add-tab-button {
+    background-color: transparent;
+    width: 30px;
+    height: 30px;
+    margin: 5px;
+}
+
+/* URL Bar Focus */
+#url-bar:focus {
+    outline: none;
+    border: 1px solid #00aaff;
+    box-shadow: 0 0 5px #00aaff;
+}

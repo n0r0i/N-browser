@@ -20,7 +20,7 @@ function addTabToUI(tabId, title) {
     tabEl.dataset.tabId = tabId;
     tabEl.innerHTML = `
         <span class="tab-title">${title}</span>
-        <button class="close-tab-button">x</button>
+        <button class="close-tab-button"><i class="fas fa-times"></i></button>
     `;
 
     tabBar.appendChild(tabEl);
