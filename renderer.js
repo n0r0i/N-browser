@@ -19,11 +19,12 @@ function addTabToUI(tabId, title) {
     tabEl.className = 'tab';
     tabEl.dataset.tabId = tabId;
     tabEl.innerHTML = `
+        <img class="tab-favicon" src=""> <!-- Placeholder for the icon -->
         <span class="tab-title">${title}</span>
         <button class="close-tab-button"><i class="fas fa-times"></i></button>
     `;
 
-    tabBar.appendChild(tabEl);
+    tabBar.insertBefore(tabEl, addTabButton);
 
     // Event Listeners for the new tab element
     tabEl.addEventListener('click', () => {
@@ -65,12 +66,21 @@ window.electronAPI.onTabTitleUpdated(({ viewId, title }) => {
     const tabEl = tabBar.querySelector(`[data-tab-id="${viewId}"]`);
     if (tabEl) {
         tabEl.querySelector('.tab-title').textContent = title;
+        tabEl.title = title; // Set the tooltip
     }
 });
 
 window.electronAPI.onURLUpdated(({ viewId, url }) => {
     if (viewId === activeTabId) {
         urlBar.value = url;
+    }
+});
+
+window.electronAPI.onFaviconUpdated(({ viewId, faviconUrl }) => {
+    const tabEl = tabBar.querySelector(`[data-tab-id="${viewId}"]`);
+    if (tabEl) {
+        const faviconEl = tabEl.querySelector('.tab-favicon');
+        faviconEl.src = faviconUrl;
     }
 });
 

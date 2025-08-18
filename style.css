@@ -146,6 +146,7 @@ webview {
     text-overflow: ellipsis;
     white-space: nowrap;
     padding-right: 10px;
+    user-select: none; /* Prevent text selection */
 }
 
 .close-tab-button {
@@ -160,6 +161,12 @@ webview {
 
 .close-tab-button:hover {
     background-color: #6f6f6f;
+}
+
+.tab-favicon {
+    width: 16px;
+    height: 16px;
+    margin-right: 10px;
 }
 
 /* --- Refinements for Modern Look --- */

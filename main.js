@@ -76,6 +76,11 @@ class NBrowser {
         view.webContents.on('page-title-updated', (e, title) => {
             this.mainWindow.webContents.send('tab-title-updated', { viewId, title });
         });
+        view.webContents.on('page-favicon-updated', (e, favicons) => {
+            if (favicons && favicons.length > 0) {
+                this.mainWindow.webContents.send('favicon-updated', { viewId, faviconUrl: favicons[0] });
+            }
+        });
         view.webContents.on('did-navigate', (e, url) => {
             this.mainWindow.webContents.send('url-updated', { viewId, url });
         });

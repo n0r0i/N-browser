@@ -19,5 +19,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onTabCreated: (callback) => ipcRenderer.on('tab-created', (_event, value) => callback(value)),
   onTabTitleUpdated: (callback) => ipcRenderer.on('tab-title-updated', (_event, value) => callback(value)),
   onURLUpdated: (callback) => ipcRenderer.on('url-updated', (_event, value) => callback(value)),
-  onWindowStateChange: (callback) => ipcRenderer.on('window-state-changed', (_event, value) => callback(value))
+  onWindowStateChange: (callback) => ipcRenderer.on('window-state-changed', (_event, value) => callback(value)),
+  onFaviconUpdated: (callback) => ipcRenderer.on('favicon-updated', (_event, value) => callback(value))
 });
