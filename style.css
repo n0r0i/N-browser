@@ -33,8 +33,14 @@ body, html {
 #tab-bar {
     display: flex;
     align-items: center;
+    /* flex-grow is now on the spacer */
+    height: 100%;
+}
+
+.title-bar-spacer {
     flex-grow: 1;
     height: 100%;
+    -webkit-app-region: drag; /* Make sure the empty space is draggable */
 }
 
 .tab {
