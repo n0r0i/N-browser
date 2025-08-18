@@ -2,19 +2,23 @@ import sys
 import os
 
 def _find_widevine_cdm_windows():
-    """Searches for the Widevine CDM DLL in common Chrome installation locations."""
-    possible_paths = [
+    """Searches for the Widevine CDM DLL specifically in Google Chrome installation locations."""
+    base_paths = [
         os.environ.get("ProgramFiles(x86)"),
         os.environ.get("ProgramFiles"),
-        os.path.join(os.environ.get("LOCALAPPDATA", ""), "Google\\Chrome")
+        os.environ.get("LOCALAPPDATA")
     ]
-    for path in filter(None, possible_paths):
-        try:
-            for root, _, files in os.walk(path):
-                if "widevinecdm.dll" in files:
-                    return os.path.join(root, "widevinecdm.dll")
-        except Exception as e:
-            print(f"[DEBUG] Error searching in {path}: {e}")
+    chrome_path_segment = os.path.join("Google", "Chrome")
+
+    for path in filter(None, base_paths):
+        chrome_dir = os.path.join(path, chrome_path_segment)
+        if os.path.isdir(chrome_dir):
+            try:
+                for root, _, files in os.walk(chrome_dir):
+                    if "widevinecdm.dll" in files:
+                        return os.path.join(root, "widevinecdm.dll")
+            except Exception as e:
+                print(f"[DEBUG] Error searching in {chrome_dir}: {e}")
     return None
 
 def _setup_drm():
