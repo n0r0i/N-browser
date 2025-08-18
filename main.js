@@ -7,7 +7,8 @@ let activeViewId = null;
 
 // Dedicated function to update view bounds, as suggested by user
 function updateViewBounds() {
-    if (!mainWindow || mainWindow.isDestroyed()) return;
+    // Guard clause to prevent race condition on startup
+    if (!mainWindow || mainWindow.isDestroyed() || !activeTabId) return;
 
     const activeView = views.get(activeTabId);
     if (activeView) {
