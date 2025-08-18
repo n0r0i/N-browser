@@ -45,6 +45,17 @@ function setActiveTabUI(tabId) {
 }
 
 // --- Listeners for events from the Main Process ---
+window.electronAPI.onWindowStateChange((state) => {
+    const maximizeIcon = maximizeButton.querySelector('i');
+    if (state === 'maximized') {
+        maximizeIcon.classList.remove('fa-square');
+        maximizeIcon.classList.add('fa-window-restore');
+    } else {
+        maximizeIcon.classList.remove('fa-window-restore');
+        maximizeIcon.classList.add('fa-square');
+    }
+});
+
 window.electronAPI.onTabCreated((newTab) => {
     addTabToUI(newTab.viewId, newTab.title);
     setActiveTabUI(newTab.viewId);

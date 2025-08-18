@@ -42,6 +42,13 @@ class NBrowser {
 
         this.mainWindow.on('resize', () => this._updateViewBounds());
 
+        this.mainWindow.on('maximize', () => {
+            this.mainWindow.webContents.send('window-state-changed', 'maximized');
+        });
+        this.mainWindow.on('unmaximize', () => {
+            this.mainWindow.webContents.send('window-state-changed', 'normal');
+        });
+
         // Create the first tab once the UI is ready
         this.mainWindow.webContents.once('did-finish-load', () => {
             this._createNewTab();

@@ -194,12 +194,14 @@ webview {
     align-items: center;
 }
 
-/* Make Add Tab button less prominent */
+/* Add Tab button styling */
 #add-tab-button {
-    background-color: transparent;
+    /* Use nav-button class styles but override some */
+    padding: 0;
     width: 30px;
     height: 30px;
-    margin: 5px;
+    margin-left: 5px; /* Add some space from the last tab */
+    align-self: center; /* Center it vertically in the tab bar */
 }
 
 /* URL Bar Focus */
