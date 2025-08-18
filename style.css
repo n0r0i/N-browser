@@ -133,3 +133,25 @@ webview {
     width: 100%;
     height: 100%;
 }
+
+.tab-title {
+    flex-grow: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-right: 10px;
+}
+
+.close-tab-button {
+    background: none;
+    border: none;
+    color: #d0d0d0;
+    font-weight: bold;
+    padding: 0 5px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.close-tab-button:hover {
+    background-color: #6f6f6f;
+}
