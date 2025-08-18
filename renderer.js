@@ -1,152 +1,90 @@
 // --- Globals ---
-let tabs = [];
 let activeTabId = null;
 
 // --- DOM Elements ---
 const tabBar = document.getElementById('tab-bar');
-const contentArea = document.getElementById('content-area');
 const urlBar = document.getElementById('url-bar');
-
 const backButton = document.getElementById('back-button');
 const forwardButton = document.getElementById('forward-button');
 const reloadButton = document.getElementById('reload-button');
 const addTabButton = document.getElementById('add-tab-button');
-
 const minimizeButton = document.getElementById('minimize-button');
 const maximizeButton = document.getElementById('maximize-button');
 const closeButton = document.getElementById('close-button');
 
-// --- Helper Functions ---
-const getActiveWebview = () => {
-    const activeTab = tabs.find(tab => tab.id === activeTabId);
-    return activeTab ? activeTab.webview : null;
-};
 
-// --- Tab Management Functions ---
-function createNewTab() {
-    const tabId = Date.now(); // Simple unique ID
-
-    // Create Tab Element
+// --- Tab UI Management ---
+function addTabToUI(tabId, title) {
     const tabEl = document.createElement('div');
     tabEl.className = 'tab';
     tabEl.dataset.tabId = tabId;
     tabEl.innerHTML = `
-        <span class="tab-title">New Tab</span>
+        <span class="tab-title">${title}</span>
         <button class="close-tab-button">x</button>
     `;
 
-    // Create Webview Element
-    const webview = document.createElement('webview');
-    webview.src = 'https://www.google.com';
-    webview.style.width = '100%';
-    webview.style.height = '100%';
-
-    // Store Tab Info
-    const newTab = { id: tabId, element: tabEl, webview: webview };
-    tabs.push(newTab);
-
-    // Add to DOM
     tabBar.appendChild(tabEl);
-    contentArea.appendChild(webview);
 
-    // Add Event Listeners
-    tabEl.addEventListener('click', () => switchToTab(tabId));
+    // Event Listeners for the new tab element
+    tabEl.addEventListener('click', () => {
+        window.electronAPI.switchToTab(tabId);
+    });
+
     tabEl.querySelector('.close-tab-button').addEventListener('click', (e) => {
-        e.stopPropagation(); // Prevent click from bubbling to the tab itself
-        closeTab(tabId);
+        e.stopPropagation(); // Prevent the tab click event from firing
+        window.electronAPI.closeTab(tabId);
+        tabEl.remove(); // Immediately remove from UI for responsiveness
     });
-
-    webview.addEventListener('did-navigate', (e) => {
-        if (tabId === activeTabId) {
-            urlBar.value = e.url;
-        }
-    });
-
-    webview.addEventListener('page-title-updated', (e) => {
-        tabEl.querySelector('.tab-title').textContent = e.title;
-    });
-
-    // Switch to the new tab
-    switchToTab(tabId);
 }
 
-function switchToTab(tabId) {
+function setActiveTabUI(tabId) {
     activeTabId = tabId;
-
-    tabs.forEach(tab => {
-        const isActive = tab.id === tabId;
-        tab.element.classList.toggle('active', isActive);
-        tab.webview.style.display = isActive ? 'flex' : 'none';
-        if (isActive) {
-            urlBar.value = tab.webview.getURL();
-        }
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tabId === tabId);
     });
 }
 
-function closeTab(tabId) {
-    const tabIndex = tabs.findIndex(tab => tab.id === tabId);
-    if (tabIndex === -1) return;
+// --- Listeners for events from the Main Process ---
+window.electronAPI.onTabCreated((newTab) => {
+    addTabToUI(newTab.viewId, newTab.title);
+    setActiveTabUI(newTab.viewId);
+});
 
-    const { element, webview } = tabs[tabIndex];
-
-    // Remove from DOM
-    element.remove();
-    webview.remove();
-
-    // Remove from array
-    tabs.splice(tabIndex, 1);
-
-    // If the closed tab was active, switch to a new one
-    if (activeTabId === tabId) {
-        if (tabs.length > 0) {
-            // Switch to the previous tab, or the first one if it was the first
-            const newActiveIndex = Math.max(0, tabIndex - 1);
-            switchToTab(tabs[newActiveIndex].id);
-        } else {
-            // If no tabs left, create a new one
-            createNewTab();
-        }
+window.electronAPI.onTabTitleUpdated(({ viewId, title }) => {
+    const tabEl = tabBar.querySelector(`[data-tab-id="${viewId}"]`);
+    if (tabEl) {
+        tabEl.querySelector('.tab-title').textContent = title;
     }
-}
-
-
-// --- Event Listeners ---
-// Navigation Controls
-backButton.addEventListener('click', () => {
-    const webview = getActiveWebview();
-    if (webview && webview.canGoBack()) webview.goBack();
-});
-forwardButton.addEventListener('click', () => {
-    const webview = getActiveWebview();
-    if (webview && webview.canGoForward()) webview.goForward();
-});
-reloadButton.addEventListener('click', () => {
-    const webview = getActiveWebview();
-    if (webview) webview.reload();
 });
 
-// URL Bar
+window.electronAPI.onURLUpdated(({ viewId, url }) => {
+    if (viewId === activeTabId) {
+        urlBar.value = url;
+    }
+});
+
+
+// --- UI Event Listeners that send messages to the Main Process ---
+addTabButton.addEventListener('click', () => window.electronAPI.createNewTab());
+
+backButton.addEventListener('click', () => window.electronAPI.navigateBack());
+forwardButton.addEventListener('click', () => window.electronAPI.navigateForward());
+reloadButton.addEventListener('click', () => window.electronAPI.navigateReload());
+
 urlBar.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
-        const webview = getActiveWebview();
-        if (webview) {
-            let url = urlBar.value;
-            if (!url.startsWith('http://') && !url.startsWith('https://')) {
-                url = 'http://' + url;
-            }
-            webview.loadURL(url);
+        let url = urlBar.value;
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            url = 'http://' + url;
         }
+        window.electronAPI.loadURL(url);
     }
 });
 
-// Window Controls
 minimizeButton.addEventListener('click', () => window.electronAPI.minimizeWindow());
 maximizeButton.addEventListener('click', () => window.electronAPI.maximizeWindow());
 closeButton.addEventListener('click', () => window.electronAPI.closeWindow());
 
-// Tab Management
-addTabButton.addEventListener('click', createNewTab);
-
-
 // --- Initial State ---
-createNewTab();
+// The main process will create the first tab for us when the window loads.
+// We just need to be ready to receive the 'tab-created' event.
