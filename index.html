@@ -3,9 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <title>N-Browser</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Hello from Electron!</h1>
-    <p>We will build our browser UI here.</p>
+    <div class="container">
+        <!-- Title Bar -->
+        <div id="title-bar">
+            <div id="tab-bar">
+                <!-- Tabs will be dynamically inserted here -->
+                <div class="tab active">New Tab</div>
+                <button id="add-tab-button">+</button>
+            </div>
+            <div id="window-controls">
+                <button class="control-button" id="minimize-button">-</button>
+                <button class="control-button" id="maximize-button">[]</button>
+                <button class="control-button" id="close-button">X</button>
+            </div>
+        </div>
+
+        <!-- Navigation Bar -->
+        <div id="nav-bar">
+            <button class="nav-button" id="back-button">←</button>
+            <button class="nav-button" id="forward-button">→</button>
+            <button class="nav-button" id="reload-button">⟳</button>
+            <input type="text" id="url-bar" placeholder="https://">
+        </div>
+
+        <!-- Content Area -->
+        <div id="content-area">
+            <webview id="browser-view" src="https://www.google.com" style="width:100%; height:100%;"></webview>
+        </div>
+    </div>
+
+    <script src="./renderer.js"></script>
 </body>
 </html>
