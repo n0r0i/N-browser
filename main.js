@@ -151,6 +151,10 @@ class NBrowser {
             }
         });
         ipcMain.on('close-window', () => this.mainWindow.close());
+
+        ipcMain.on('toggle-devtools', () => {
+            if (this.activeTabId) this.views.get(this.activeTabId)?.webContents.toggleDevTools();
+        });
     }
 }
 

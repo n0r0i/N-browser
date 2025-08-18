@@ -109,3 +109,10 @@ closeButton.addEventListener('click', () => window.electronAPI.closeWindow());
 // --- Initial State ---
 // The main process will create the first tab for us when the window loads.
 // We just need to be ready to receive the 'tab-created' event.
+
+// --- Global Key Listeners ---
+window.addEventListener('keydown', (e) => {
+    if (e.key === 'F12') {
+        window.electronAPI.toggleDevTools();
+    }
+});
