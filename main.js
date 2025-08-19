@@ -94,6 +94,7 @@ class NBrowser {
             }
         });
         view.webContents.on('did-navigate', (e, url) => {
+            console.log(`[main.js] did-navigate: view ${viewId} navigated to ${url}. Sending url-updated.`);
             this.mainWindow.webContents.send('url-updated', { viewId, url });
             const title = view.webContents.getTitle();
             database.addHistory(url, title);
@@ -180,6 +181,16 @@ class NBrowser {
             const favorites = await database.getFavorites();
             console.log(`[main.js] Got ${favorites.length} favorites items from DB. Sending to renderer.`);
             event.sender.send('favorites-data', favorites);
+        });
+
+        ipcMain.on('delete-history-item', (event, id) => {
+            database.deleteHistory(id);
+            event.sender.send('refresh-data');
+        });
+
+        ipcMain.on('delete-favorite-item', (event, id) => {
+            database.deleteFavorite(id);
+            event.sender.send('refresh-data');
         });
 
         ipcMain.on('add-favorite', () => {

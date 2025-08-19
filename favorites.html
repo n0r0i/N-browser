@@ -14,12 +14,26 @@
             itemList.innerHTML = '';
             data.forEach(item => {
                 const li = document.createElement('li');
-                li.innerHTML = `<a href="${item.url}">${item.title}</a>`;
+                li.innerHTML = `<a href="${item.url}">${item.title}</a> <button class="delete-button" data-id="${item.id}">Delete</button>`;
                 itemList.appendChild(li);
             });
         });
         // Request data when the page loads
         window.electronAPI.getFavoritesData();
+
+        // Listen for delete clicks
+        itemList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-button')) {
+                const id = e.target.dataset.id;
+                window.electronAPI.deleteFavoriteItem(id);
+            }
+        });
+
+        // Listen for refresh requests from main process
+        window.electronAPI.onRefreshData(() => {
+            // A bit of a delay to ensure DB operation is complete
+            setTimeout(() => window.electronAPI.getFavoritesData(), 100);
+        });
     </script>
 </body>
 </html>

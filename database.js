@@ -94,10 +94,32 @@ function getFavorites() {
     });
 }
 
+function deleteHistory(id) {
+    if (!db) return;
+    const sql = `DELETE FROM history WHERE id = ?`;
+    db.run(sql, id, function(err) {
+        if (err) {
+            return console.error('[DB Error]', err.message);
+        }
+    });
+}
+
+function deleteFavorite(id) {
+    if (!db) return;
+    const sql = `DELETE FROM favorites WHERE id = ?`;
+    db.run(sql, id, function(err) {
+        if (err) {
+            return console.error('[DB Error]', err.message);
+        }
+    });
+}
+
 module.exports = {
     initDb,
     addHistory,
     addFavorite,
     getHistory,
-    getFavorites
+    getFavorites,
+    deleteHistory,
+    deleteFavorite
 };

@@ -245,3 +245,44 @@ webview {
 .dropdown-item:hover {
     background-color: #4f4f4f;
 }
+
+/* --- Library Page Styles --- */
+#item-list {
+    list-style: none;
+    padding: 0;
+}
+
+#item-list li {
+    padding: 10px;
+    border-bottom: 1px solid #3c3c3c;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+#item-list li:hover {
+    background-color: #3c3c3c;
+}
+
+#item-list li a {
+    color: #d0d0d0;
+    text-decoration: none;
+}
+
+#item-list li a:hover {
+    text-decoration: underline;
+}
+
+.delete-button {
+    background-color: #555;
+    color: #d0d0d0;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.delete-button:hover {
+    background-color: #e81123;
+}

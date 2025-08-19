@@ -73,7 +73,9 @@ window.electronAPI.onTabTitleUpdated(({ viewId, title }) => {
 });
 
 window.electronAPI.onURLUpdated(({ viewId, url }) => {
+    console.log(`[renderer.js] url-updated event received for view ${viewId}. Active tab is ${activeTabId}.`);
     if (viewId === activeTabId) {
+        console.log(`[renderer.js] Updating URL bar to: ${url}`);
         urlBar.value = url;
     }
 });
