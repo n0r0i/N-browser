@@ -94,7 +94,7 @@ class NBrowser {
                 { label: 'Forward', click: () => view.webContents.goForward(), enabled: view.webContents.canGoForward() },
                 { label: 'Reload', click: () => view.webContents.reload() },
                 { type: 'separator' },
-                { label: 'Inspect', click: () => view.webContents.openDevTools() }
+                { label: 'Inspect', click: () => view.webContents.openDevTools({ mode: 'undocked' }) }
             ]);
             menu.popup({ window: this.mainWindow });
         });
