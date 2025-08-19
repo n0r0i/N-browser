@@ -231,26 +231,34 @@ class NBrowser {
         ipcMain.on('close-window', () => this.mainWindow.close());
 
         ipcMain.on('show-main-menu', () => {
-            const menuTemplate = [
-                {
-                    label: 'History',
-                    click: () => this._createNewTab({
-                        url: `file://${path.join(__dirname, 'history.html')}`,
-                        title: 'History',
-                        webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
-                    })
-                },
-                {
-                    label: 'Favorites',
-                    click: () => this._createNewTab({
-                        url: `file://${path.join(__dirname, 'favorites.html')}`,
-                        title: 'Favorites',
-                        webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
-                    })
+            // This now creates a custom HTML-based menu window
+            if (this.menuWindow && !this.menuWindow.isDestroyed()) {
+                this.menuWindow.close();
+            }
+            const [winX, winY] = this.mainWindow.getPosition();
+            const navBarHeight = 40; // Approximate height of the top bar
+            this.menuWindow = new BrowserWindow({
+                parent: this.mainWindow,
+                x: winX + this.mainWindow.getBounds().width - 250, // Position near the menu button
+                y: winY + navBarHeight + 50,
+                width: 240,
+                height: 100, // Adjusted height for two items
+                frame: false,
+                transparent: true,
+                alwaysOnTop: true,
+                resizable: false,
+                show: false,
+                webPreferences: {
+                    preload: path.join(__dirname, 'preload-popup.js')
                 }
-            ];
-            const menu = Menu.buildFromTemplate(menuTemplate);
-            menu.popup({ window: this.mainWindow });
+            });
+            this.menuWindow.loadFile(path.join(__dirname, 'menu.html'));
+            this.menuWindow.once('ready-to-show', () => this.menuWindow.show());
+            this.menuWindow.on('blur', () => {
+                if (this.menuWindow && !this.menuWindow.isDestroyed()) {
+                    this.menuWindow.close();
+                }
+            });
         });
     }
 }
