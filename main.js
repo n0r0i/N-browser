@@ -15,12 +15,10 @@ class NBrowser {
     _init() {
         app.whenReady().then(async () => {
             protocol.registerFileProtocol('nbrowser', (request, callback) => {
-                const page = request.url.replace('nbrowser://', '');
-                // For now, both history and favorites map to library.html
-                // We can differentiate later if needed, but the page's JS will handle content.
-                if (page === 'history' || page === 'favorites') {
-                    callback({ path: path.join(__dirname, 'library.html') });
-                }
+                // Takes a URL like nbrowser://path/to/file.html?query=param
+                // and maps it to /path/to/app/path/to/file.html
+                const url = request.url.replace('nbrowser://', '').split('?')[0];
+                callback({ path: path.join(__dirname, url) });
             });
 
             // Set User Agent for the default session, as suggested by user
@@ -161,7 +159,7 @@ class NBrowser {
         ipcMain.on('close-tab', (e, viewId) => this._closeTab(viewId));
 
         ipcMain.on('open-library-page', (e, page) => {
-            const url = `nbrowser://${page}`; // e.g. nbrowser://history
+            const url = `nbrowser://library.html?page=${page}`;
             const title = page.charAt(0).toUpperCase() + page.slice(1);
             this._createNewTab({
                 url,
