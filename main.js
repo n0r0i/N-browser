@@ -1,10 +1,7 @@
 const { app, BrowserWindow, BrowserView, ipcMain, session, Menu, protocol } = require('electron');
 const path = require('node:path');
 
-// Register nbrowser protocol as privileged to allow fetching local resources.
-protocol.registerSchemesAsPrivileged([
-    { scheme: 'nbrowser', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }
-]);
+// Custom protocol removed for stability. Will revert to file://
 require('events').EventEmitter.defaultMaxListeners = 20; // Suppress MaxListenersExceededWarning
 const database = require('./database.js');
 
@@ -20,13 +17,6 @@ class NBrowser {
 
     _init() {
         app.whenReady().then(async () => {
-            protocol.registerFileProtocol('nbrowser', (request, callback) => {
-                // Takes a URL like nbrowser://path/to/file.html?query=param
-                // and maps it to /path/to/app/path/to/file.html
-                const url = request.url.replace('nbrowser://', '').split('?')[0];
-                callback({ path: path.join(__dirname, url) });
-            });
-
             // Set User Agent for the default session, as suggested by user
             session.defaultSession.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
 
@@ -165,7 +155,8 @@ class NBrowser {
         ipcMain.on('close-tab', (e, viewId) => this._closeTab(viewId));
 
         ipcMain.on('open-library-page', (e, page) => {
-            const url = `nbrowser://library.html?page=${page}`;
+            // page will be 'history' or 'favorites'
+            const url = `file://${path.join(__dirname, `${page}.html`)}`;
             const title = page.charAt(0).toUpperCase() + page.slice(1);
             this._createNewTab({
                 url,
@@ -225,43 +216,27 @@ class NBrowser {
         });
         ipcMain.on('close-window', () => this.mainWindow.close());
 
-        ipcMain.on('show-main-menu', (e, rect) => {
-            if (this.menuWindow) {
-                this.menuWindow.close();
-                this.menuWindow = null;
-                return;
-            }
-
-            const mainBounds = this.mainWindow.getBounds();
-            const MENU_WIDTH = 200;
-            const MENU_HEIGHT = 80;
-
-            const x = Math.round(mainBounds.x + rect.x + rect.width - MENU_WIDTH);
-            const y = Math.round(mainBounds.y + rect.y + rect.height);
-
-            this.menuWindow = new BrowserWindow({
-                width: MENU_WIDTH,
-                height: MENU_HEIGHT,
-                x: x,
-                y: y,
-                frame: false,
-                transparent: true,
-                alwaysOnTop: true,
-                resizable: false,
-                webPreferences: {
-                    preload: path.join(__dirname, 'preload-menu.js'),
-                    contextIsolation: true,
+        ipcMain.on('show-main-menu', () => {
+            const menuTemplate = [
+                {
+                    label: 'History',
+                    click: () => this._createNewTab({
+                        url: `file://${path.join(__dirname, 'history.html')}`,
+                        title: 'History',
+                        webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
+                    })
+                },
+                {
+                    label: 'Favorites',
+                    click: () => this._createNewTab({
+                        url: `file://${path.join(__dirname, 'favorites.html')}`,
+                        title: 'Favorites',
+                        webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true }
+                    })
                 }
-            });
-
-            this.menuWindow.loadFile('menu.html');
-
-            this.menuWindow.on('blur', () => {
-                if (this.menuWindow && !this.menuWindow.isDestroyed()) {
-                    this.menuWindow.close();
-                }
-                this.menuWindow = null;
-            });
+            ];
+            const menu = Menu.buildFromTemplate(menuTemplate);
+            menu.popup({ window: this.mainWindow });
         });
     }
 }

@@ -93,13 +93,7 @@ addTabButton.addEventListener('click', () => window.electronAPI.createNewTab());
 favoriteButton.addEventListener('click', () => window.electronAPI.addFavorite());
 
 menuButton.addEventListener('click', () => {
-    const rect = menuButton.getBoundingClientRect();
-    window.electronAPI.showMainMenu({
-        x: Math.round(rect.x),
-        y: Math.round(rect.y),
-        width: Math.round(rect.width),
-        height: Math.round(rect.height)
-    });
+    window.electronAPI.showMainMenu();
 });
 
 backButton.addEventListener('click', () => window.electronAPI.navigateBack());

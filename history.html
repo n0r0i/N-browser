@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>History</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body style="padding: 20px;">
+    <h1>History</h1>
+    <ul id="item-list"></ul>
+    <script>
+        const itemList = document.getElementById('item-list');
+        window.electronAPI.onHistoryData((data) => {
+            itemList.innerHTML = '';
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.innerHTML = `<a href="${item.url}">${item.title}</a> <span class="timestamp">${new Date(item.timestamp).toLocaleString()}</span>`;
+                itemList.appendChild(li);
+            });
+        });
+        // Request data when the page loads
+        window.electronAPI.getHistoryData();
+    </script>
+</body>
+</html>

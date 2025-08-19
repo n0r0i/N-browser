@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Favorites</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body style="padding: 20px;">
+    <h1>Favorites</h1>
+    <ul id="item-list"></ul>
+    <script>
+        const itemList = document.getElementById('item-list');
+        window.electronAPI.onFavoritesData((data) => {
+            itemList.innerHTML = '';
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.innerHTML = `<a href="${item.url}">${item.title}</a>`;
+                itemList.appendChild(li);
+            });
+        });
+        // Request data when the page loads
+        window.electronAPI.getFavoritesData();
+    </script>
+</body>
+</html>
