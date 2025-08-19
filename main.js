@@ -1,4 +1,4 @@
-const { app, BrowserWindow, BrowserView, ipcMain, globalShortcut } = require('electron');
+const { app, BrowserWindow, BrowserView, ipcMain, globalShortcut, session } = require('electron');
 const path = require('node:path');
 
 class NBrowser {
@@ -12,6 +12,9 @@ class NBrowser {
 
     _init() {
         app.whenReady().then(() => {
+            // Set User Agent for the default session, as suggested by user
+            session.defaultSession.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
+
             this._createWindow();
             this._setupIpcListeners();
             this._setupGlobalShortcuts();
