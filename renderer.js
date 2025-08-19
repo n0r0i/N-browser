@@ -30,6 +30,8 @@ function addTabToUI(tabId, title) {
 
     // Event Listeners for the new tab element
     tabEl.addEventListener('click', () => {
+        // Optimistically update UI and state, then tell main process
+        setActiveTabUI(tabId);
         window.electronAPI.switchToTab(tabId);
     });
 
@@ -62,6 +64,11 @@ window.electronAPI.onWindowStateChange((state) => {
 window.electronAPI.onTabCreated((newTab) => {
     addTabToUI(newTab.viewId, newTab.title);
     setActiveTabUI(newTab.viewId);
+});
+
+// This is the primary mechanism for keeping the renderer's active tab state in sync
+window.electronAPI.onTabSwitched((tabId) => {
+    setActiveTabUI(tabId);
 });
 
 window.electronAPI.onTabTitleUpdated(({ viewId, title }) => {

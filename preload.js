@@ -21,10 +21,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   minimizeWindow: () => ipcRenderer.send('minimize-window'),
   maximizeWindow: () => ipcRenderer.send('maximize-window'),
-  closeWindow: () => ipcRenderer.send('close-window')
+  closeWindow: () => ipcRenderer.send('close-window'),
 
   // --- Main to Renderer (Events) ---
   onTabCreated: (callback) => ipcRenderer.on('tab-created', (_event, value) => callback(value)),
+  onTabSwitched: (callback) => ipcRenderer.on('tab-switched', (_event, value) => callback(value)),
   onTabTitleUpdated: (callback) => ipcRenderer.on('tab-title-updated', (_event, value) => callback(value)),
   onURLUpdated: (callback) => {
       console.log('[preload.js] onURLUpdated listener being set up.');

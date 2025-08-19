@@ -77,7 +77,7 @@ class NBrowser {
     }
 
     _createNewTab(options = {}) {
-        const { url = 'https://www.google.com', title = 'New Tab', webPreferences = {} } = options;
+        const { url = 'https://www.google.com', title = 'Nova Aba', webPreferences = {} } = options;
 
         const viewId = Date.now().toString();
         const view = new BrowserView({ webPreferences });
@@ -85,15 +85,15 @@ class NBrowser {
 
         view.webContents.loadURL(url);
 
-        view.webContents.on('page-title-updated', (e, title) => {
+        view.webContents.on('page-title-updated', (event, title) => {
             this.mainWindow.webContents.send('tab-title-updated', { viewId, title });
         });
-        view.webContents.on('page-favicon-updated', (e, favicons) => {
+        view.webContents.on('page-favicon-updated', (event, favicons) => {
             if (favicons && favicons.length > 0) {
                 this.mainWindow.webContents.send('favicon-updated', { viewId, faviconUrl: favicons[0] });
             }
         });
-        view.webContents.on('did-navigate', (e, url) => {
+        view.webContents.on('did-navigate', (event, url) => {
             console.log(`[main.js] did-navigate: view ${viewId} navigated to ${url}. Sending url-updated.`);
             this.mainWindow.webContents.send('url-updated', { viewId, url });
             const title = view.webContents.getTitle();
@@ -102,17 +102,17 @@ class NBrowser {
 
         view.webContents.on('context-menu', (e, params) => {
             const menu = Menu.buildFromTemplate([
-                { label: 'Back', click: () => view.webContents.goBack(), enabled: view.webContents.canGoBack() },
-                { label: 'Forward', click: () => view.webContents.goForward(), enabled: view.webContents.canGoForward() },
-                { label: 'Reload', click: () => view.webContents.reload() },
+                { label: 'Voltar', click: () => view.webContents.goBack(), enabled: view.webContents.canGoBack() },
+                { label: 'Avançar', click: () => view.webContents.goForward(), enabled: view.webContents.canGoForward() },
+                { label: 'Recarregar', click: () => view.webContents.reload() },
                 { type: 'separator' },
-                { label: 'Inspect', click: () => view.webContents.openDevTools({ mode: 'undocked' }) }
+                { label: 'Inspecionar', click: () => view.webContents.openDevTools({ mode: 'undocked' }) }
             ]);
             menu.popup({ window: this.mainWindow });
         });
 
         this._switchToTab(viewId);
-        this.mainWindow.webContents.send('tab-created', { viewId, title: 'New Tab' });
+        this.mainWindow.webContents.send('tab-created', { viewId, title: 'Nova Aba' });
     }
 
     _switchToTab(viewId) {
@@ -123,6 +123,9 @@ class NBrowser {
 
         this.mainWindow.setBrowserView(view);
         this._updateViewBounds();
+
+        // Notify the renderer that the active tab has changed
+        this.mainWindow.webContents.send('tab-switched', viewId);
 
         const url = view.webContents.getURL();
         this.mainWindow.webContents.send('url-updated', { viewId, url });
@@ -152,8 +155,8 @@ class NBrowser {
 
     _setupIpcListeners() {
         ipcMain.on('create-new-tab', () => this._createNewTab({})); // Pass empty options for default behavior
-        ipcMain.on('switch-to-tab', (e, viewId) => this._switchToTab(viewId));
-        ipcMain.on('close-tab', (e, viewId) => this._closeTab(viewId));
+        ipcMain.on('switch-to-tab', (event, viewId) => this._switchToTab(viewId));
+        ipcMain.on('close-tab', (event, viewId) => this._closeTab(viewId));
 
         ipcMain.on('open-library-page', (e, page) => {
             // page will be 'history' or 'favorites'
@@ -213,7 +216,7 @@ class NBrowser {
         ipcMain.on('nav-reload', () => {
             if (this.activeTabId) this.views.get(this.activeTabId)?.webContents.reload();
         });
-        ipcMain.on('nav-load-url', (e, url) => {
+        ipcMain.on('nav-load-url', (event, url) => {
             if (this.activeTabId) this.views.get(this.activeTabId)?.webContents.loadURL(url);
         });
 
