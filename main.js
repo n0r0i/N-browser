@@ -1,4 +1,4 @@
-const { app, BrowserWindow, BrowserView, ipcMain, globalShortcut, session } = require('electron');
+const { app, BrowserWindow, BrowserView, ipcMain, session, Menu } = require('electron');
 const path = require('node:path');
 
 class NBrowser {
@@ -17,7 +17,6 @@ class NBrowser {
 
             this._createWindow();
             this._setupIpcListeners();
-            this._setupGlobalShortcuts();
 
             app.on('activate', () => {
                 if (BrowserWindow.getAllWindows().length === 0) this._createWindow();
@@ -26,11 +25,6 @@ class NBrowser {
 
         app.on('window-all-closed', () => {
             if (process.platform !== 'darwin') app.quit();
-        });
-
-        app.on('will-quit', () => {
-            // Unregister all shortcuts.
-            globalShortcut.unregisterAll();
         });
     }
 
@@ -92,6 +86,17 @@ class NBrowser {
         });
         view.webContents.on('did-navigate', (e, url) => {
             this.mainWindow.webContents.send('url-updated', { viewId, url });
+        });
+
+        view.webContents.on('context-menu', (e, params) => {
+            const menu = Menu.buildFromTemplate([
+                { label: 'Back', click: () => view.webContents.goBack(), enabled: view.webContents.canGoBack() },
+                { label: 'Forward', click: () => view.webContents.goForward(), enabled: view.webContents.canGoForward() },
+                { label: 'Reload', click: () => view.webContents.reload() },
+                { type: 'separator' },
+                { label: 'Inspect', click: () => view.webContents.openDevTools() }
+            ]);
+            menu.popup({ window: this.mainWindow });
         });
 
         this._switchToTab(viewId);
@@ -160,20 +165,6 @@ class NBrowser {
             }
         });
         ipcMain.on('close-window', () => this.mainWindow.close());
-    }
-
-    _setupGlobalShortcuts() {
-        const ret = globalShortcut.register('F12', () => {
-            if (this.activeTabId) {
-                this.views.get(this.activeTabId)?.webContents.toggleDevTools();
-            }
-        });
-
-        if (!ret) {
-            console.log('[ERROR] F12 shortcut registration failed.');
-        } else {
-            console.log('[INFO] F12 shortcut registered successfully.');
-        }
     }
 }
 
