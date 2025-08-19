@@ -93,32 +93,13 @@ addTabButton.addEventListener('click', () => window.electronAPI.createNewTab());
 favoriteButton.addEventListener('click', () => window.electronAPI.addFavorite());
 
 menuButton.addEventListener('click', () => {
-    // Simple dropdown menu
-    const menu = document.createElement('div');
-    menu.className = 'dropdown-menu';
-    menu.innerHTML = `
-        <a id="history-menu-item" class="dropdown-item">History</a>
-        <a id="favorites-menu-item" class="dropdown-item">Favorites</a>
-    `;
-    document.body.appendChild(menu);
-
     const rect = menuButton.getBoundingClientRect();
-    menu.style.top = rect.bottom + 'px';
-    menu.style.right = (window.innerWidth - rect.right) + 'px';
-
-    menu.querySelector('#history-menu-item').addEventListener('click', () => {
-        window.electronAPI.openLibraryPage('history');
-        menu.remove();
+    window.electronAPI.showMainMenu({
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height)
     });
-    menu.querySelector('#favorites-menu-item').addEventListener('click', () => {
-        window.electronAPI.openLibraryPage('favorites');
-        menu.remove();
-    });
-
-    // Close menu when clicking elsewhere
-    setTimeout(() => {
-        window.addEventListener('click', () => menu.remove(), { once: true });
-    }, 0);
 });
 
 backButton.addEventListener('click', () => window.electronAPI.navigateBack());

@@ -1,11 +1,17 @@
 const { app, BrowserWindow, BrowserView, ipcMain, session, Menu, protocol } = require('electron');
 const path = require('node:path');
+
+// Register nbrowser protocol as privileged to allow fetching local resources.
+protocol.registerSchemesAsPrivileged([
+    { scheme: 'nbrowser', privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true } }
+]);
 require('events').EventEmitter.defaultMaxListeners = 20; // Suppress MaxListenersExceededWarning
 const database = require('./database.js');
 
 class NBrowser {
     constructor() {
         this.mainWindow = null;
+        this.menuWindow = null;
         this.views = new Map();
         this.activeTabId = null;
 
@@ -218,6 +224,45 @@ class NBrowser {
             }
         });
         ipcMain.on('close-window', () => this.mainWindow.close());
+
+        ipcMain.on('show-main-menu', (e, rect) => {
+            if (this.menuWindow) {
+                this.menuWindow.close();
+                this.menuWindow = null;
+                return;
+            }
+
+            const mainBounds = this.mainWindow.getBounds();
+            const MENU_WIDTH = 200;
+            const MENU_HEIGHT = 80;
+
+            const x = Math.round(mainBounds.x + rect.x + rect.width - MENU_WIDTH);
+            const y = Math.round(mainBounds.y + rect.y + rect.height);
+
+            this.menuWindow = new BrowserWindow({
+                width: MENU_WIDTH,
+                height: MENU_HEIGHT,
+                x: x,
+                y: y,
+                frame: false,
+                transparent: true,
+                alwaysOnTop: true,
+                resizable: false,
+                webPreferences: {
+                    preload: path.join(__dirname, 'preload-menu.js'),
+                    contextIsolation: true,
+                }
+            });
+
+            this.menuWindow.loadFile('menu.html');
+
+            this.menuWindow.on('blur', () => {
+                if (this.menuWindow && !this.menuWindow.isDestroyed()) {
+                    this.menuWindow.close();
+                }
+                this.menuWindow = null;
+            });
+        });
     }
 }
 

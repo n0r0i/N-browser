@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body { padding: 0; background-color: #3c3c3c; -webkit-app-region: no-drag; }
+        .menu-container {
+            display: flex;
+            flex-direction: column;
+        }
+        .menu-item {
+            padding: 10px 15px;
+            color: #d0d0d0;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .menu-item:hover {
+            background-color: #4f4f4f;
+        }
+    </style>
+</head>
+<body>
+    <div class="menu-container">
+        <div class="menu-item" id="history-menu-item">History</div>
+        <div class="menu-item" id="favorites-menu-item">Favorites</div>
+    </div>
+    <script>
+        document.getElementById('history-menu-item').addEventListener('click', () => {
+            window.menuAPI.openLibrary('history');
+            window.close();
+        });
+        document.getElementById('favorites-menu-item').addEventListener('click', () => {
+            window.menuAPI.openLibrary('favorites');
+            window.close();
+        });
+    </script>
+</body>
+</html>

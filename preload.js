@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadURL: (url) => ipcRenderer.send('nav-load-url', url),
   addFavorite: () => ipcRenderer.send('add-favorite'),
   openLibraryPage: (page) => ipcRenderer.send('open-library-page', page),
+  showMainMenu: (rect) => ipcRenderer.send('show-main-menu', rect),
 
   // Library Page Communication
   getHistoryData: () => ipcRenderer.send('get-history-data'),
