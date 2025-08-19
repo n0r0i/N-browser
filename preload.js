@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   minimizeWindow: () => ipcRenderer.send('minimize-window'),
   maximizeWindow: () => ipcRenderer.send('maximize-window'),
-  closeWindow: () => ipcRenderer.send('close-window'),
+  closeWindow: () => ipcRenderer.send('close-window')
 
   // --- Main to Renderer (Events) ---
   onTabCreated: (callback) => ipcRenderer.on('tab-created', (_event, value) => callback(value)),
