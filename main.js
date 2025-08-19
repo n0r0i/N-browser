@@ -160,11 +160,17 @@ class NBrowser {
     }
 
     _setupGlobalShortcuts() {
-        globalShortcut.register('F12', () => {
+        const ret = globalShortcut.register('F12', () => {
             if (this.activeTabId) {
                 this.views.get(this.activeTabId)?.webContents.toggleDevTools();
             }
         });
+
+        if (!ret) {
+            console.log('[ERROR] F12 shortcut registration failed.');
+        } else {
+            console.log('[INFO] F12 shortcut registered successfully.');
+        }
     }
 }
 
