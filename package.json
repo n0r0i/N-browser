@@ -21,5 +21,8 @@
   "homepage": "https://github.com/n0r0i/N-browser#readme",
   "devDependencies": {
     "electron": "^37.3.0"
+  },
+  "dependencies": {
+    "sqlite3": "^5.1.7"
   }
 }

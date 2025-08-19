@@ -1,5 +1,6 @@
 const { app, BrowserWindow, BrowserView, ipcMain, session, Menu } = require('electron');
 const path = require('node:path');
+const database = require('./database.js');
 
 class NBrowser {
     constructor() {
@@ -11,9 +12,11 @@ class NBrowser {
     }
 
     _init() {
-        app.whenReady().then(() => {
+        app.whenReady().then(async () => {
             // Set User Agent for the default session, as suggested by user
             session.defaultSession.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
+
+            await database.initDb();
 
             this._createWindow();
             this._setupIpcListeners();
@@ -69,12 +72,12 @@ class NBrowser {
         }
     }
 
-    _createNewTab() {
+    _createNewTab(url = 'https://www.google.com', title = 'New Tab') {
         const viewId = Date.now().toString();
         const view = new BrowserView();
         this.views.set(viewId, view);
 
-        view.webContents.loadURL('https://www.google.com');
+        view.webContents.loadURL(url);
 
         view.webContents.on('page-title-updated', (e, title) => {
             this.mainWindow.webContents.send('tab-title-updated', { viewId, title });
@@ -86,6 +89,8 @@ class NBrowser {
         });
         view.webContents.on('did-navigate', (e, url) => {
             this.mainWindow.webContents.send('url-updated', { viewId, url });
+            const title = view.webContents.getTitle();
+            database.addHistory(url, title);
         });
 
         view.webContents.on('context-menu', (e, params) => {
@@ -142,6 +147,33 @@ class NBrowser {
         ipcMain.on('create-new-tab', () => this._createNewTab());
         ipcMain.on('switch-to-tab', (e, viewId) => this._switchToTab(viewId));
         ipcMain.on('close-tab', (e, viewId) => this._closeTab(viewId));
+
+        ipcMain.on('open-library-page', (e, page) => {
+            const url = `file://${path.join(__dirname, 'library.html')}?page=${page}`;
+            const title = page.charAt(0).toUpperCase() + page.slice(1);
+            this._createNewTab(url, title);
+        });
+
+        ipcMain.on('get-history-data', async (event) => {
+            const history = await database.getHistory();
+            event.sender.send('history-data', history);
+        });
+
+        ipcMain.on('get-favorites-data', async (event) => {
+            const favorites = await database.getFavorites();
+            event.sender.send('favorites-data', favorites);
+        });
+
+        ipcMain.on('add-favorite', () => {
+            if (this.activeTabId) {
+                const view = this.views.get(this.activeTabId);
+                if (view) {
+                    const url = view.webContents.getURL();
+                    const title = view.webContents.getTitle();
+                    database.addFavorite(url, title);
+                }
+            }
+        });
 
         ipcMain.on('nav-back', () => {
             if (this.activeTabId) this.views.get(this.activeTabId)?.webContents.goBack();

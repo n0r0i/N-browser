@@ -8,9 +8,12 @@ const backButton = document.getElementById('back-button');
 const forwardButton = document.getElementById('forward-button');
 const reloadButton = document.getElementById('reload-button');
 const addTabButton = document.getElementById('add-tab-button');
+const favoriteButton = document.getElementById('favorite-button');
 const minimizeButton = document.getElementById('minimize-button');
 const maximizeButton = document.getElementById('maximize-button');
 const closeButton = document.getElementById('close-button');
+const historyButton = document.getElementById('history-button');
+const favoritesListButton = document.getElementById('favorites-list-button');
 
 
 // --- Tab UI Management ---
@@ -87,6 +90,11 @@ window.electronAPI.onFaviconUpdated(({ viewId, faviconUrl }) => {
 
 // --- UI Event Listeners that send messages to the Main Process ---
 addTabButton.addEventListener('click', () => window.electronAPI.createNewTab());
+
+favoriteButton.addEventListener('click', () => window.electronAPI.addFavorite());
+
+historyButton.addEventListener('click', () => window.electronAPI.openLibraryPage('history'));
+favoritesListButton.addEventListener('click', () => window.electronAPI.openLibraryPage('favorites'));
 
 backButton.addEventListener('click', () => window.electronAPI.navigateBack());
 forwardButton.addEventListener('click', () => window.electronAPI.navigateForward());

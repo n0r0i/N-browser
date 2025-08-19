@@ -10,6 +10,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   navigateForward: () => ipcRenderer.send('nav-forward'),
   navigateReload: () => ipcRenderer.send('nav-reload'),
   loadURL: (url) => ipcRenderer.send('nav-load-url', url),
+  addFavorite: () => ipcRenderer.send('add-favorite'),
+  openLibraryPage: (page) => ipcRenderer.send('open-library-page', page),
+
+  // Library Page Communication
+  getHistoryData: () => ipcRenderer.send('get-history-data'),
+  getFavoritesData: () => ipcRenderer.send('get-favorites-data'),
 
   minimizeWindow: () => ipcRenderer.send('minimize-window'),
   maximizeWindow: () => ipcRenderer.send('maximize-window'),
@@ -20,5 +26,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onTabTitleUpdated: (callback) => ipcRenderer.on('tab-title-updated', (_event, value) => callback(value)),
   onURLUpdated: (callback) => ipcRenderer.on('url-updated', (_event, value) => callback(value)),
   onWindowStateChange: (callback) => ipcRenderer.on('window-state-changed', (_event, value) => callback(value)),
-  onFaviconUpdated: (callback) => ipcRenderer.on('favicon-updated', (_event, value) => callback(value))
+  onFaviconUpdated: (callback) => ipcRenderer.on('favicon-updated', (_event, value) => callback(value)),
+  onHistoryData: (callback) => ipcRenderer.on('history-data', (_event, data) => callback(data)),
+  onFavoritesData: (callback) => ipcRenderer.on('favorites-data', (_event, data) => callback(data))
 });
