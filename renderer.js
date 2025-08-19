@@ -111,8 +111,4 @@ closeButton.addEventListener('click', () => window.electronAPI.closeWindow());
 // We just need to be ready to receive the 'tab-created' event.
 
 // --- Global Key Listeners ---
-window.addEventListener('keydown', (e) => {
-    if (e.key === 'F12') {
-        window.electronAPI.toggleDevTools();
-    }
-});
+// F12 is now handled by the main process using globalShortcut.

@@ -1,4 +1,4 @@
-const { app, BrowserWindow, BrowserView, ipcMain } = require('electron');
+const { app, BrowserWindow, BrowserView, ipcMain, globalShortcut } = require('electron');
 const path = require('node:path');
 
 class NBrowser {
@@ -14,6 +14,7 @@ class NBrowser {
         app.whenReady().then(() => {
             this._createWindow();
             this._setupIpcListeners();
+            this._setupGlobalShortcuts();
 
             app.on('activate', () => {
                 if (BrowserWindow.getAllWindows().length === 0) this._createWindow();
@@ -22,6 +23,11 @@ class NBrowser {
 
         app.on('window-all-closed', () => {
             if (process.platform !== 'darwin') app.quit();
+        });
+
+        app.on('will-quit', () => {
+            // Unregister all shortcuts.
+            globalShortcut.unregisterAll();
         });
     }
 
@@ -151,9 +157,13 @@ class NBrowser {
             }
         });
         ipcMain.on('close-window', () => this.mainWindow.close());
+    }
 
-        ipcMain.on('toggle-devtools', () => {
-            if (this.activeTabId) this.views.get(this.activeTabId)?.webContents.toggleDevTools();
+    _setupGlobalShortcuts() {
+        globalShortcut.register('F12', () => {
+            if (this.activeTabId) {
+                this.views.get(this.activeTabId)?.webContents.toggleDevTools();
+            }
         });
     }
 }
