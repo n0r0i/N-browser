@@ -14,9 +14,12 @@ class NBrowser {
     _init() {
         app.whenReady().then(async () => {
             protocol.registerFileProtocol('nbrowser', (request, callback) => {
-                // Remove 'nbrowser://' and the query string to get the base file name
-                const url = request.url.split('?')[0].replace('nbrowser://', '');
-                callback({ path: path.join(__dirname, url) });
+                const page = request.url.replace('nbrowser://', '');
+                // For now, both history and favorites map to library.html
+                // We can differentiate later if needed, but the page's JS will handle content.
+                if (page === 'history' || page === 'favorites') {
+                    callback({ path: path.join(__dirname, 'library.html') });
+                }
             });
 
             // Set User Agent for the default session, as suggested by user
@@ -78,9 +81,11 @@ class NBrowser {
         }
     }
 
-    _createNewTab(url = 'https://www.google.com', title = 'New Tab') {
+    _createNewTab(options = {}) {
+        const { url = 'https://www.google.com', title = 'New Tab', webPreferences = {} } = options;
+
         const viewId = Date.now().toString();
-        const view = new BrowserView();
+        const view = new BrowserView({ webPreferences });
         this.views.set(viewId, view);
 
         view.webContents.loadURL(url);
@@ -150,14 +155,21 @@ class NBrowser {
     }
 
     _setupIpcListeners() {
-        ipcMain.on('create-new-tab', () => this._createNewTab());
+        ipcMain.on('create-new-tab', () => this._createNewTab({})); // Pass empty options for default behavior
         ipcMain.on('switch-to-tab', (e, viewId) => this._switchToTab(viewId));
         ipcMain.on('close-tab', (e, viewId) => this._closeTab(viewId));
 
         ipcMain.on('open-library-page', (e, page) => {
-            const url = `nbrowser://library.html?page=${page}`;
+            const url = `nbrowser://${page}`; // e.g. nbrowser://history
             const title = page.charAt(0).toUpperCase() + page.slice(1);
-            this._createNewTab(url, title);
+            this._createNewTab({
+                url,
+                title,
+                webPreferences: {
+                    preload: path.join(__dirname, 'preload.js'),
+                    contextIsolation: true,
+                }
+            });
         });
 
         ipcMain.on('get-history-data', async (event) => {

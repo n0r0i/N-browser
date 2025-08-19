@@ -1,9 +1,8 @@
 const pageTitle = document.getElementById('page-title');
 const itemList = document.getElementById('item-list');
 
-// Determine page type from URL query parameter
-const urlParams = new URLSearchParams(window.location.search);
-const pageType = urlParams.get('page'); // 'history' or 'favorites'
+// Determine page type from URL hostname
+const pageType = window.location.hostname; // e.g., 'history' or 'favorites'
 
 // Set up the page and request data
 if (pageType === 'history') {

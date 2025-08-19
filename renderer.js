@@ -102,10 +102,16 @@ reloadButton.addEventListener('click', () => window.electronAPI.navigateReload()
 
 urlBar.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
-        let url = urlBar.value;
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-            url = 'http://' + url;
+        let input = urlBar.value;
+        let url;
+
+        // Basic check for URL vs. search query
+        if (input.includes('.') && !input.includes(' ')) {
+            url = !input.startsWith('http') ? 'http://' + input : input;
+        } else {
+            url = 'https://www.google.com/search?q=' + encodeURIComponent(input);
         }
+
         window.electronAPI.loadURL(url);
     }
 });
