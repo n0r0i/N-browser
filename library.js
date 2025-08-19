@@ -1,3 +1,4 @@
+console.log('[library.js] Script loaded and running.');
 const pageTitle = document.getElementById('page-title');
 const itemList = document.getElementById('item-list');
 

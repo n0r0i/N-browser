@@ -1,5 +1,6 @@
 const { app, BrowserWindow, BrowserView, ipcMain, session, Menu, protocol } = require('electron');
 const path = require('node:path');
+require('events').EventEmitter.defaultMaxListeners = 20; // Suppress MaxListenersExceededWarning
 const database = require('./database.js');
 
 class NBrowser {
