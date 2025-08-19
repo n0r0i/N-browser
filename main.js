@@ -1,4 +1,4 @@
-const { app, BrowserWindow, BrowserView, ipcMain, session, Menu } = require('electron');
+const { app, BrowserWindow, BrowserView, ipcMain, session, Menu, protocol } = require('electron');
 const path = require('node:path');
 const database = require('./database.js');
 
@@ -13,6 +13,12 @@ class NBrowser {
 
     _init() {
         app.whenReady().then(async () => {
+            protocol.registerFileProtocol('nbrowser', (request, callback) => {
+                // Remove 'nbrowser://' and the query string to get the base file name
+                const url = request.url.split('?')[0].replace('nbrowser://', '');
+                callback({ path: path.join(__dirname, url) });
+            });
+
             // Set User Agent for the default session, as suggested by user
             session.defaultSession.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
 
@@ -149,18 +155,22 @@ class NBrowser {
         ipcMain.on('close-tab', (e, viewId) => this._closeTab(viewId));
 
         ipcMain.on('open-library-page', (e, page) => {
-            const url = `file://${path.join(__dirname, 'library.html')}?page=${page}`;
+            const url = `nbrowser://library.html?page=${page}`;
             const title = page.charAt(0).toUpperCase() + page.slice(1);
             this._createNewTab(url, title);
         });
 
         ipcMain.on('get-history-data', async (event) => {
+            console.log('[main.js] Received request for history data.');
             const history = await database.getHistory();
+            console.log(`[main.js] Got ${history.length} history items from DB. Sending to renderer.`);
             event.sender.send('history-data', history);
         });
 
         ipcMain.on('get-favorites-data', async (event) => {
+            console.log('[main.js] Received request for favorites data.');
             const favorites = await database.getFavorites();
+            console.log(`[main.js] Got ${favorites.length} favorites items from DB. Sending to renderer.`);
             event.sender.send('favorites-data', favorites);
         });
 
