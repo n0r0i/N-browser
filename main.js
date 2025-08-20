@@ -1,5 +1,7 @@
-const { app, BrowserWindow, BrowserView, ipcMain, session, Menu, protocol } = require('electron');
+const { app, BrowserWindow, BrowserView, ipcMain, session, Menu, protocol, dialog, shell } = require('electron');
 const path = require('node:path');
+const fs = require('node:fs');
+const axios = require('axios');
 
 // Custom protocol removed for stability. Will revert to file://
 require('events').EventEmitter.defaultMaxListeners = 20; // Suppress MaxListenersExceededWarning
@@ -11,6 +13,7 @@ class NBrowser {
         this.menuWindow = null;
         this.views = new Map();
         this.activeTabId = null;
+        this.isFullscreen = false;
 
         this._init();
     }
@@ -27,6 +30,72 @@ class NBrowser {
 
             app.on('activate', () => {
                 if (BrowserWindow.getAllWindows().length === 0) this._createWindow();
+            });
+
+            // Set up download handling using a manual, robust method
+            session.defaultSession.on('will-download', async (event, item, webContents) => {
+                event.preventDefault();
+
+                const filename = item.getFilename();
+                const url = item.getURL();
+
+                try {
+                    const { canceled, filePath } = await dialog.showSaveDialog({
+                        title: 'Save File',
+                        defaultPath: filename,
+                        buttonLabel: 'Save'
+                    });
+
+                    if (canceled || !filePath) {
+                        return; // User cancelled the dialog
+                    }
+
+                    this.mainWindow.webContents.send('download-progress', { filename, progress: 0 });
+
+                    const response = await axios({
+                        method: 'get',
+                        url: url,
+                        responseType: 'stream',
+                    });
+
+                    const writer = fs.createWriteStream(filePath);
+                    const totalBytes = parseInt(response.headers['content-length'], 10);
+                    let receivedBytes = 0;
+
+                    response.data.on('data', (chunk) => {
+                        receivedBytes += chunk.length;
+                        const progress = receivedBytes / totalBytes;
+                        this.mainWindow.webContents.send('download-progress', { filename, progress });
+                    });
+
+                    // Add to database immediately with 'progressing' state
+                    database.addDownload({
+                        filename: filename,
+                        url: url,
+                        save_path: filePath,
+                        total_bytes: totalBytes,
+                        state: 'progressing'
+                    });
+
+                    response.data.pipe(writer);
+
+                    writer.on('finish', () => {
+                        this.mainWindow.webContents.send('download-complete', { filename, state: 'completed' });
+                        database.updateDownloadState(filename, 'completed');
+                        this.mainWindow.webContents.send('refresh-data'); // Tell pages to refresh
+                    });
+
+                    writer.on('error', (err) => {
+                        console.error('File write error:', err);
+                        this.mainWindow.webContents.send('download-complete', { filename, state: 'interrupted' });
+                        database.updateDownloadState(filename, 'interrupted');
+                        this.mainWindow.webContents.send('refresh-data'); // Tell pages to refresh
+                    });
+
+                } catch (err) {
+                    console.error('[Download Error]', err.message);
+                    this.mainWindow.webContents.send('download-complete', { filename, state: 'interrupted' });
+                }
             });
         });
 
@@ -71,8 +140,13 @@ class NBrowser {
         const activeView = this.views.get(this.activeTabId);
         if (activeView) {
             const [width, height] = this.mainWindow.getContentSize();
-            const navBarHeight = 85;
-            activeView.setBounds({ x: 0, y: navBarHeight, width: width, height: height - navBarHeight });
+
+            if (this.isFullscreen) {
+                activeView.setBounds({ x: 0, y: 0, width: width, height: height });
+            } else {
+                const navBarHeight = 85;
+                activeView.setBounds({ x: 0, y: navBarHeight, width: width, height: height - navBarHeight });
+            }
         }
     }
 
@@ -109,6 +183,21 @@ class NBrowser {
                 { label: 'Inspecionar', click: () => view.webContents.openDevTools({ mode: 'undocked' }) }
             ]);
             menu.popup({ window: this.mainWindow });
+        });
+
+        // Handle HTML5 fullscreen API
+        view.webContents.on('enter-html-full-screen', () => {
+            this.isFullscreen = true;
+            this.mainWindow.setFullScreen(true);
+            this.mainWindow.webContents.send('enter-fullscreen');
+            this._updateViewBounds();
+        });
+
+        view.webContents.on('leave-html-full-screen', () => {
+            this.isFullscreen = false;
+            this.mainWindow.setFullScreen(false);
+            this.mainWindow.webContents.send('leave-fullscreen');
+            this._updateViewBounds();
         });
 
         this._switchToTab(viewId);
@@ -158,6 +247,17 @@ class NBrowser {
         ipcMain.on('switch-to-tab', (event, viewId) => this._switchToTab(viewId));
         ipcMain.on('close-tab', (event, viewId) => this._closeTab(viewId));
 
+        ipcMain.on('open-downloads-page', () => {
+            this._createNewTab({
+                url: `file://${path.join(__dirname, 'downloads.html')}`,
+                title: 'Downloads',
+                webPreferences: {
+                    preload: path.join(__dirname, 'preload.js'),
+                    contextIsolation: true,
+                }
+            });
+        });
+
         ipcMain.on('open-library-page', (e, page) => {
             // page will be 'history' or 'favorites'
             const url = `file://${path.join(__dirname, `${page}.html`)}`;
@@ -186,6 +286,13 @@ class NBrowser {
             event.sender.send('favorites-data', favorites);
         });
 
+        ipcMain.on('get-downloads-data', async (event) => {
+            console.log('[main.js] Received request for downloads data.');
+            const downloads = await database.getDownloads();
+            console.log(`[main.js] Got ${downloads.length} downloads items from DB. Sending to renderer.`);
+            event.sender.send('downloads-data', downloads);
+        });
+
         ipcMain.on('delete-history-item', (event, id) => {
             database.deleteHistory(id);
             event.sender.send('refresh-data');
@@ -194,6 +301,15 @@ class NBrowser {
         ipcMain.on('delete-favorite-item', (event, id) => {
             database.deleteFavorite(id);
             event.sender.send('refresh-data');
+        });
+
+        ipcMain.on('delete-download-item', (event, id) => {
+            database.deleteDownload(id);
+            event.sender.send('refresh-data');
+        });
+
+        ipcMain.on('open-download-folder', (event, filePath) => {
+            shell.showItemInFolder(filePath);
         });
 
         ipcMain.on('add-favorite', () => {

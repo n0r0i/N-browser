@@ -13,6 +13,8 @@ const minimizeButton = document.getElementById('minimize-button');
 const maximizeButton = document.getElementById('maximize-button');
 const closeButton = document.getElementById('close-button');
 const menuButton = document.getElementById('menu-button');
+const downloadButton = document.getElementById('download-button');
+const container = document.querySelector('.container');
 
 
 // --- Tab UI Management ---
@@ -95,11 +97,46 @@ window.electronAPI.onFaviconUpdated(({ viewId, faviconUrl }) => {
     }
 });
 
+// --- Fullscreen Handlers ---
+window.electronAPI.onEnterFullscreen(() => {
+    container.classList.add('fullscreen-active');
+});
+
+window.electronAPI.onLeaveFullscreen(() => {
+    container.classList.remove('fullscreen-active');
+});
+
+// --- Download Handlers ---
+window.electronAPI.onDownloadProgress((data) => {
+    // For now, just log the progress. A more complex UI could show a progress bar.
+    console.log(`Download progress for ${data.filename}: ${Math.round(data.progress * 100)}%`);
+    // Simple visual feedback: make the button glow or change color
+    downloadButton.style.color = '#00aaff';
+});
+
+window.electronAPI.onDownloadComplete((data) => {
+    console.log(`Download complete for ${data.filename}, state: ${data.state}`);
+    // Change color based on state
+    if (data.state === 'completed') {
+        downloadButton.style.color = '#28a745'; // Green for success
+    } else {
+        downloadButton.style.color = '#dc3545'; // Red for failure/cancel
+    }
+    // Reset color after a delay
+    setTimeout(() => {
+        downloadButton.style.color = ''; // Reset to default
+    }, 3000);
+});
+
 
 // --- UI Event Listeners that send messages to the Main Process ---
 addTabButton.addEventListener('click', () => window.electronAPI.createNewTab());
 
 favoriteButton.addEventListener('click', () => window.electronAPI.addFavorite());
+
+downloadButton.addEventListener('click', () => {
+    window.electronAPI.openDownloadsPage();
+});
 
 menuButton.addEventListener('click', () => {
     window.electronAPI.showMainMenu();

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Downloads</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body style="padding: 20px;">
+    <h1>Downloads</h1>
+    <ul id="item-list">
+        <!-- Download items will be dynamically inserted here -->
+    </ul>
+    <script>
+        const itemList = document.getElementById('item-list');
+
+        // Listen for download data from the main process
+        window.electronAPI.onDownloadsData((data) => {
+            itemList.innerHTML = '';
+            data.forEach(item => {
+                const li = document.createElement('li');
+                li.dataset.filePath = item.save_path; // Store for click handler
+                li.style.cursor = 'pointer'; // Indicate it's clickable
+
+                li.innerHTML = `
+                    <div class="download-item-main">
+                        <span style="font-weight: bold;">${item.filename}</span>
+                        <span style="color: #9e9e9e; font-size: 12px; word-break: break-all;">${item.save_path}</span>
+                    </div>
+                    <div style="text-align: right;">
+                        <span style="font-style: italic;">${item.state}</span>
+                        <button class="delete-button" data-id="${item.id}">Delete</button>
+                    </div>
+                `;
+                itemList.appendChild(li);
+            });
+        });
+
+        // Request data when the page loads
+        window.electronAPI.getDownloadsData();
+
+        // Listen for clicks on the list
+        itemList.addEventListener('click', (e) => {
+            const target = e.target;
+            // Check if the delete button or its child was clicked
+            if (target.classList.contains('delete-button') || target.closest('.delete-button')) {
+                const button = target.closest('.delete-button');
+                const id = button.dataset.id;
+                window.electronAPI.deleteDownloadItem(id);
+                e.stopPropagation(); // Prevent the li click handler from firing
+            } else {
+                // Otherwise, treat it as a click to open the folder
+                const li = target.closest('li');
+                if (li && li.dataset.filePath) {
+                    window.electronAPI.openDownloadFolder(li.dataset.filePath);
+                }
+            }
+        });
+
+        // Listen for refresh requests from main process
+        window.electronAPI.onRefreshData(() => {
+            // A bit of a delay to ensure DB operation is complete
+            setTimeout(() => window.electronAPI.getDownloadsData(), 100);
+        });
+    </script>
+</body>
+</html>

@@ -14,10 +14,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   showMainMenu: () => ipcRenderer.send('show-main-menu'),
 
   // Library Page Communication
+  openDownloadsPage: () => ipcRenderer.send('open-downloads-page'),
   getHistoryData: () => ipcRenderer.send('get-history-data'),
   getFavoritesData: () => ipcRenderer.send('get-favorites-data'),
+  getDownloadsData: () => ipcRenderer.send('get-downloads-data'),
   deleteHistoryItem: (id) => ipcRenderer.send('delete-history-item', id),
   deleteFavoriteItem: (id) => ipcRenderer.send('delete-favorite-item', id),
+  deleteDownloadItem: (id) => ipcRenderer.send('delete-download-item', id),
+  openDownloadFolder: (filePath) => ipcRenderer.send('open-download-folder', filePath),
 
   minimizeWindow: () => ipcRenderer.send('minimize-window'),
   maximizeWindow: () => ipcRenderer.send('maximize-window'),
@@ -38,5 +42,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   onFaviconUpdated: (callback) => ipcRenderer.on('favicon-updated', (_event, value) => callback(value)),
   onHistoryData: (callback) => ipcRenderer.on('history-data', (_event, data) => callback(data)),
   onFavoritesData: (callback) => ipcRenderer.on('favorites-data', (_event, data) => callback(data)),
-  onRefreshData: (callback) => ipcRenderer.on('refresh-data', callback)
+  onRefreshData: (callback) => ipcRenderer.on('refresh-data', callback),
+
+  // Fullscreen Events
+  onEnterFullscreen: (callback) => ipcRenderer.on('enter-fullscreen', callback),
+  onLeaveFullscreen: (callback) => ipcRenderer.on('leave-fullscreen', callback),
+
+  // Download Events
+  onDownloadsData: (callback) => ipcRenderer.on('downloads-data', (_event, data) => callback(data)),
+  onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (_event, data) => callback(data)),
+  onDownloadComplete: (callback) => ipcRenderer.on('download-complete', (_event, data) => callback(data))
 });

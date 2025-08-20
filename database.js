@@ -37,6 +37,17 @@ function createTables() {
             title TEXT
         )`;
 
+    const downloadsSql = `
+        CREATE TABLE IF NOT EXISTS downloads (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename TEXT NOT NULL,
+            url TEXT NOT NULL,
+            save_path TEXT NOT NULL,
+            total_bytes INTEGER,
+            state TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`;
+
     return new Promise((resolve, reject) => {
         db.serialize(() => {
             db.run(historySql, (err) => {
@@ -46,6 +57,10 @@ function createTables() {
             db.run(favoritesSql, (err) => {
                 if (err) return reject(err);
                 console.log('[DB Info] "favorites" table is ready.');
+            });
+            db.run(downloadsSql, (err) => {
+                if (err) return reject(err);
+                console.log('[DB Info] "downloads" table is ready.');
                 resolve();
             });
         });
@@ -114,6 +129,49 @@ function deleteFavorite(id) {
     });
 }
 
+function addDownload(details) {
+    if (!db) return;
+    const { filename, url, save_path, total_bytes, state } = details;
+    const sql = `INSERT INTO downloads (filename, url, save_path, total_bytes, state) VALUES (?, ?, ?, ?, ?)`;
+    db.run(sql, [filename, url, save_path, total_bytes, state], function(err) {
+        if (err) {
+            return console.error('[DB Error] Failed to add download:', err.message);
+        }
+        console.log(`[DB Info] Download added with ID: ${this.lastID}`);
+    });
+}
+
+function updateDownloadState(filename, state) {
+    if (!db) return;
+    const sql = `UPDATE downloads SET state = ? WHERE filename = ?`;
+    db.run(sql, [state, filename], function(err) {
+        if (err) {
+            return console.error('[DB Error] Failed to update download state:', err.message);
+        }
+    });
+}
+
+function getDownloads() {
+    return new Promise((resolve, reject) => {
+        if (!db) return reject("Database not initialized.");
+        const sql = `SELECT * FROM downloads ORDER BY timestamp DESC`;
+        db.all(sql, [], (err, rows) => {
+            if (err) return reject(err);
+            resolve(rows);
+        });
+    });
+}
+
+function deleteDownload(id) {
+    if (!db) return;
+    const sql = `DELETE FROM downloads WHERE id = ?`;
+    db.run(sql, id, function(err) {
+        if (err) {
+            return console.error('[DB Error]', err.message);
+        }
+    });
+}
+
 module.exports = {
     initDb,
     addHistory,
@@ -121,5 +179,9 @@ module.exports = {
     getHistory,
     getFavorites,
     deleteHistory,
-    deleteFavorite
+    deleteFavorite,
+    addDownload,
+    getDownloads,
+    updateDownloadState,
+    deleteDownload
 };

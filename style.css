@@ -256,10 +256,9 @@ webview {
     padding: 10px;
     border-bottom: 1px solid #3c3c3c;
     display: flex;
-    justify-content: space-between;
     align-items: center;
     flex-wrap: wrap; /* Allow items to wrap to the next line on small screens */
-    gap: 10px; /* Add some space when items wrap */
+    gap: 10px; /* Add some space between items */
 }
 
 #item-list li:hover {
@@ -294,8 +293,15 @@ webview {
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.2s ease-in-out;
+    flex-shrink: 0; /* Prevent the button from shrinking */
 }
 
 .delete-button:hover {
     background-color: #e81123;
+}
+
+/* --- Fullscreen Mode --- */
+.fullscreen-active #title-bar,
+.fullscreen-active #nav-bar {
+    display: none;
 }
