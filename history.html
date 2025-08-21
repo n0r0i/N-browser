@@ -3,21 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <title>History</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="history.css">
 </head>
 <body style="padding: 20px;">
     <h1>History</h1>
     <ul id="item-list"></ul>
     <script>
-        const itemList = document.getElementById('item-list');
-        window.electronAPI.onHistoryData((data) => {
-            itemList.innerHTML = '';
-            data.forEach(item => {
-                const li = document.createElement('li');
-                li.innerHTML = `<a href="${item.url}">${item.title}</a> <span class="timestamp">${new Date(item.timestamp).toLocaleString()}</span> <button class="delete-button" data-id="${item.id}">Delete</button>`;
-                itemList.appendChild(li);
-            });
+    const itemList = document.getElementById('item-list');
+    window.electronAPI.onHistoryData((data) => {
+        itemList.innerHTML = '';
+        data.forEach(item => {
+            const li = document.createElement('li');
+            const date = new Date(item.timestamp);
+
+            // Formata a data e a hora separadamente para o padrão brasileiro (ou o padrão do sistema)
+            const formattedDate = date.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const formattedTime = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+
+            li.innerHTML = `<a href="${item.url}">${item.title}</a> <span class="timestamp">${formattedDate} ${formattedTime}</span> <button class="delete-button" data-id="${item.id}">Delete</button>`;
+            itemList.appendChild(li);
         });
+    });
         // Request data when the page loads
         window.electronAPI.getHistoryData();
 

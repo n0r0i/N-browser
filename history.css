@@ -1,0 +1,78 @@
+/* General Body Styles */
+body {
+    background-color: #1e1e1e;
+    color: #d4d4d4;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    padding: 20px;
+}
+
+h1 {
+    color: #cccccc;
+    font-weight: 300;
+    border-bottom: 1px solid #444;
+    padding-bottom: 10px;
+}
+
+/* Item List Container */
+#item-list {
+    list-style: none;
+    padding: 0;
+    margin-top: 20px;
+}
+
+/* Individual Item Styles */
+#item-list li {
+    background-color: #2a2a2a;
+    border: 1px solid #3a3a3a;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+}
+
+#item-list li:hover {
+    background-color: #333333;
+    border-color: #555;
+}
+
+/* Link and Text Styles */
+#item-list li a {
+    color: #87ceeb; /* Sky Blue for links */
+    text-decoration: none;
+    font-size: 16px;
+    flex-grow: 1;
+    min-width: 0;
+}
+
+#item-list li a:hover {
+    text-decoration: underline;
+}
+
+.timestamp {
+    color: #888888;
+    font-size: 12px;
+    margin: 0 15px;
+    flex-shrink: 0;
+}
+
+/* Delete Button */
+.delete-button {
+    background-color: #444;
+    color: #d4d4d4;
+    border: 1px solid #555;
+    border-radius: 5px;
+    padding: 5px 12px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.2s, border-color 0.2s;
+    flex-shrink: 0;
+}
+
+.delete-button:hover {
+    background-color: #c42b1c; /* A modern red */
+    border-color: #e03e3e;
+}

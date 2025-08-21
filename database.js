@@ -27,7 +27,7 @@ function createTables() {
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             url TEXT NOT NULL,
             title TEXT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            timestamp INTEGER
         )`;
 
     const favoritesSql = `
@@ -36,7 +36,7 @@ function createTables() {
             url TEXT NOT NULL UNIQUE,
             title TEXT
         )`;
-
+    
     const downloadsSql = `
         CREATE TABLE IF NOT EXISTS downloads (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -45,7 +45,7 @@ function createTables() {
             save_path TEXT NOT NULL,
             total_bytes INTEGER,
             state TEXT,
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+            timestamp INTEGER
         )`;
 
     return new Promise((resolve, reject) => {
@@ -69,8 +69,8 @@ function createTables() {
 
 function addHistory(url, title) {
     if (!db || !url.startsWith('http')) return;
-    const sql = `INSERT INTO history (url, title) VALUES (?, ?)`;
-    db.run(sql, [url, title], function(err) {
+    const sql = `INSERT INTO history (url, title, timestamp) VALUES (?, ?, ?)`;
+    db.run(sql, [url, title, Date.now()], function(err) {
         if (err) {
             return console.error('[DB Error]', err.message);
         }
@@ -132,8 +132,8 @@ function deleteFavorite(id) {
 function addDownload(details) {
     if (!db) return;
     const { filename, url, save_path, total_bytes, state } = details;
-    const sql = `INSERT INTO downloads (filename, url, save_path, total_bytes, state) VALUES (?, ?, ?, ?, ?)`;
-    db.run(sql, [filename, url, save_path, total_bytes, state], function(err) {
+    const sql = `INSERT INTO downloads (filename, url, save_path, total_bytes, state, timestamp) VALUES (?, ?, ?, ?, ?, ?)`;
+    db.run(sql, [filename, url, save_path, total_bytes, state, Date.now()], function(err) {
         if (err) {
             return console.error('[DB Error] Failed to add download:', err.message);
         }
