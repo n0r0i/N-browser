@@ -27,6 +27,7 @@ class NBrowser {
             // Set User Agent for the default session, as suggested by user
             session.defaultSession.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
 
+            console.log('App Path:', app.getAppPath());
             this.extensions = new ElectronChromeExtensions();
 
             try {
