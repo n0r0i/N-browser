@@ -29,6 +29,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   maximizeWindow: () => ipcRenderer.send('maximize-window'),
   closeWindow: () => ipcRenderer.send('close-window'),
 
+  toggleUBlock: () => ipcRenderer.invoke('toggle-ublock'),
+
   // --- Main to Renderer (Events) ---
   onTabCreated: (callback) => ipcRenderer.on('tab-created', (_event, value) => callback(value)),
   onTabSwitched: (callback) => ipcRenderer.on('tab-switched', (_event, value) => callback(value)),

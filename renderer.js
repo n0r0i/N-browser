@@ -14,6 +14,7 @@ const maximizeButton = document.getElementById('maximize-button');
 const closeButton = document.getElementById('close-button');
 const menuButton = document.getElementById('menu-button');
 const downloadButton = document.getElementById('download-button');
+const uBlockToggleButton = document.getElementById('ublock-toggle-button');
 const container = document.querySelector('.container');
 
 
@@ -49,6 +50,17 @@ function setActiveTabUI(tabId) {
     document.querySelectorAll('.tab').forEach(tab => {
         tab.classList.toggle('active', tab.dataset.tabId === tabId);
     });
+}
+
+function updateUBlockButton(isEnabled) {
+    const icon = uBlockToggleButton.querySelector('i');
+    if (isEnabled) {
+        icon.style.color = '#28a745'; // Green for enabled
+        uBlockToggleButton.title = 'uBlock Origin (Enabled)';
+    } else {
+        icon.style.color = '#6c757d'; // Gray for disabled
+        uBlockToggleButton.title = 'uBlock Origin (Disabled)';
+    }
 }
 
 // --- Listeners for events from the Main Process ---
@@ -138,6 +150,11 @@ window.electronAPI.onDownloadComplete((data) => {
 addTabButton.addEventListener('click', () => window.electronAPI.createNewTab());
 
 favoriteButton.addEventListener('click', () => window.electronAPI.addFavorite());
+
+uBlockToggleButton.addEventListener('click', async () => {
+    const isEnabled = await window.electronAPI.toggleUBlock();
+    updateUBlockButton(isEnabled);
+});
 
 downloadButton.addEventListener('click', () => {
     window.electronAPI.openDownloadsPage();
@@ -247,6 +264,7 @@ urlBar.addEventListener('keydown', (e) => {
 // --- Initial State ---
 // The main process will create the first tab for us when the window loads.
 // We just need to be ready to receive the 'tab-created' event.
+updateUBlockButton(true); // Set initial state (assuming it's enabled by default)
 
 // --- Global Key Listeners ---
 // F12 is now handled by the main process using globalShortcut.

@@ -1,4 +1,5 @@
 const { app, BrowserWindow, BrowserView, ipcMain, session, Menu, protocol, dialog, shell } = require('electron');
+const { ElectronChromeExtensions } = require('electron-chrome-extensions');
 const path = require('node:path');
 const fs = require('node:fs');
 const axios = require('axios');
@@ -14,6 +15,9 @@ class NBrowser {
         this.views = new Map();
         this.activeTabId = null;
         this.isFullscreen = false;
+        this.extensions = null; // To hold the extensions instance
+        this.uBlockExtension = null; // To hold the uBlock extension object
+        this.isUBlockEnabled = true; // To track the state
 
         this._init();
     }
@@ -22,6 +26,16 @@ class NBrowser {
         app.whenReady().then(async () => {
             // Set User Agent for the default session, as suggested by user
             session.defaultSession.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
+
+            this.extensions = new ElectronChromeExtensions();
+
+            try {
+                const uBlockPath = path.join(__dirname, 'ublock-origin');
+                this.uBlockExtension = await session.defaultSession.loadExtension(uBlockPath, { allowFileAccess: true });
+                console.log('uBlock Origin loaded successfully.');
+            } catch (error) {
+                console.error('Failed to load uBlock Origin extension:', error);
+            }
 
             await database.initDb();
 
@@ -156,6 +170,8 @@ class NBrowser {
         const viewId = Date.now().toString();
         const view = new BrowserView({ webPreferences });
         this.views.set(viewId, view);
+
+        this.extensions.addTab(view.webContents, this.mainWindow);
 
         view.webContents.loadURL(url);
 
@@ -408,6 +424,31 @@ class NBrowser {
                     this.menuWindow.close();
                 }
             });
+        });
+
+        ipcMain.handle('toggle-ublock', async () => {
+            if (!this.uBlockExtension) {
+                console.error("uBlock extension not loaded.");
+                return this.isUBlockEnabled;
+            }
+
+            this.isUBlockEnabled = !this.isUBlockEnabled; // Toggle the state
+
+            try {
+                if (this.isUBlockEnabled) {
+                    await session.defaultSession.enableExtension(this.uBlockExtension.id);
+                    console.log('uBlock Origin enabled.');
+                } else {
+                    await session.defaultSession.disableExtension(this.uBlockExtension.id);
+                    console.log('uBlock Origin disabled.');
+                }
+            } catch (error) {
+                console.error('Failed to toggle uBlock Origin:', error);
+                // Revert state on error
+                this.isUBlockEnabled = !this.isUBlockEnabled;
+            }
+
+            return this.isUBlockEnabled;
         });
     }
 }
