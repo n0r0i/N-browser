@@ -2,44 +2,301 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>History</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico</title>
+    <link rel="icon" href="https://www.google.com/s2/favicons?domain=time.gov">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="history.css">
 </head>
-<body style="padding: 20px;">
-    <h1>History</h1>
-    <ul id="item-list"></ul>
+<body>
+
+    <div id="clear-modal" class="modal-backdrop">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Limpar dados de navegação</h2>
+                <button id="close-modal-button" class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="control-group">
+                    <label>Excluir por palavra-chave</label>
+                    <input type="text" id="keyword-clear-input" placeholder="Ex: google">
+                </div>
+                <button id="keyword-clear-button" class="modal-action-button">Limpar por Palavra-Chave</button>
+                
+                <hr class="separator">
+
+                <div class="control-group">
+                    <label>Excluir por período de tempo</label>
+                    <div class="time-control-group">
+                        <input type="number" id="time-clear-value" value="1" min="1">
+                        <select id="time-clear-unit">
+                            <option value="minutes">Minuto(s)</option>
+                            <option value="hours" selected>Hora(s)</option>
+                            <option value="days">Dia(s)</option>
+                            <option value="weeks">Semana(s)</option>
+                            <option value="months">Mês(es)</option>
+                        </select>
+                    </div>
+                </div>
+                <button id="time-clear-button" class="modal-action-button">Limpar por Período</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="history-layout">
+        <nav class="sidebar">
+            <h1>Histórico</h1>
+            <ul class="filter-menu">
+                <li><a href="#" id="filter-today" class="active">Hoje</a></li>
+                <li><a href="#" id="filter-yesterday">Ontem</a></li>
+                <li><a href="#" id="filter-last-7-days">Últimos 7 dias</a></li>
+                <li><a href="#" id="filter-all">Tudo</a></li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <div>
+                <button class="header-button" id="open-clear-modal-button">Excluir dados de navegação...</button>
+            </div>
+            
+            <div class="content-header">
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="search-input" placeholder="Pesquisar no histórico">
+                </div>
+                
+            </div>
+
+            <ul id="item-list"></ul>
+        </main>
+    </div>
+
     <script>
-    const itemList = document.getElementById('item-list');
-    window.electronAPI.onHistoryData((data) => {
-        itemList.innerHTML = '';
-        data.forEach(item => {
-            const li = document.createElement('li');
-            const date = new Date(item.timestamp);
+        // --- Referências aos elementos ---
+        const itemList = document.getElementById('item-list');
+        const searchInput = document.getElementById('search-input');
+        const filterLinks = document.querySelectorAll('.filter-menu a');
+        
+        // --- Referências do Modal ---
+        const clearModal = document.getElementById('clear-modal');
+        const openClearModalButton = document.getElementById('open-clear-modal-button');
+        const closeModalButton = document.getElementById('close-modal-button');
+        const keywordClearInput = document.getElementById('keyword-clear-input');
+        const keywordClearButton = document.getElementById('keyword-clear-button');
+        const timeClearValue = document.getElementById('time-clear-value');
+        const timeClearUnit = document.getElementById('time-clear-unit');
+        const timeClearButton = document.getElementById('time-clear-button');
 
-            // Formata a data e a hora separadamente para o padrão brasileiro (ou o padrão do sistema)
-            const formattedDate = date.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit', year: 'numeric' });
-            const formattedTime = date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+        let fullHistoryData = [];
 
-            li.innerHTML = `<a href="${item.url}">${item.title}</a> <span class="timestamp">${formattedDate} ${formattedTime}</span> <button class="delete-button" data-id="${item.id}">Delete</button>`;
-            itemList.appendChild(li);
+        // --- Função Helper para extrair o domínio ---
+        function getDomainFromUrl(url) {
+            try {
+                return new URL(url).hostname.replace('www.', '');
+            } catch (e) {
+                return url;
+            }
+        }
+
+        // --- Função para Renderizar o Histórico (versão segura com createElement) ---
+        function renderHistory(items) {
+            itemList.innerHTML = ''; // Limpa a lista antes de renderizar
+            let lastDisplayedDate = null;
+            const dateFormatter = new Intl.DateTimeFormat('pt-BR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            if (items.length === 0) {
+                const li = document.createElement('li');
+                li.textContent = 'Nenhum item de histórico encontrado.';
+                li.style.justifyContent = 'center';
+                li.style.padding = '20px';
+                itemList.appendChild(li);
+                return;
+            }
+
+            items.forEach(item => {
+                const date = new Date(item.timestamp);
+                const currentDate = dateFormatter.format(date);
+
+                // Adiciona o cabeçalho de data se for um novo dia
+                if (currentDate !== lastDisplayedDate) {
+                    const h2 = document.createElement('h2');
+                    h2.className = 'date-separator';
+                    h2.textContent = currentDate.charAt(0).toUpperCase() + currentDate.slice(1);
+                    itemList.appendChild(h2);
+                    lastDisplayedDate = currentDate;
+                }
+
+                // Cria o elemento da lista (li)
+                const li = document.createElement('li');
+
+                // Hora
+                const timestampSpan = document.createElement('span');
+                timestampSpan.className = 'timestamp';
+                timestampSpan.textContent = date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                li.appendChild(timestampSpan);
+
+                // Favicon
+                const domain = getDomainFromUrl(item.url);
+                const faviconImg = document.createElement('img');
+                faviconImg.className = 'item-favicon';
+                faviconImg.src = `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
+                faviconImg.alt = '';
+                // Add error handler to hide broken icons
+                faviconImg.onerror = () => {
+                    faviconImg.style.display = 'none';
+                };
+                li.appendChild(faviconImg);
+
+                // Conteúdo de Texto Combinado (Título e Domínio)
+                const textContentDiv = document.createElement('div');
+                textContentDiv.className = 'item-text-content';
+
+                const link = document.createElement('a');
+                link.href = item.url;
+                link.title = `${item.title || 'Sem Título'} (${item.url})`;
+                
+                const titleSpan = document.createElement('span');
+                titleSpan.className = 'item-title';
+                titleSpan.textContent = item.title || item.url;
+                link.appendChild(titleSpan);
+
+                const domainSpan = document.createElement('span');
+                domainSpan.className = 'item-domain-text'; // Use a new class to avoid style conflicts
+                domainSpan.textContent = ` - ${domain}`;
+                link.appendChild(domainSpan);
+
+                textContentDiv.appendChild(link);
+                li.appendChild(textContentDiv);
+
+                // Botão de Deletar
+                const deleteButton = document.createElement('button');
+                deleteButton.className = 'delete-button';
+                deleteButton.dataset.id = item.id;
+                deleteButton.title = 'Excluir este item';
+                const trashIcon = document.createElement('i');
+                trashIcon.className = 'fas fa-trash-alt';
+                deleteButton.appendChild(trashIcon);
+                li.appendChild(deleteButton);
+
+                // Adiciona o item completo à lista
+                itemList.appendChild(li);
+            });
+        }
+
+        // --- Lógica de Filtragem ---
+        function applyFilter(filterType) {
+            console.log(`Applying filter: ${filterType}`);
+            const now = new Date();
+            const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+            const startOfYesterday = startOfToday - (24 * 60 * 60 * 1000);
+            const startOf7DaysAgo = startOfToday - (6 * 24 * 60 * 60 * 1000);
+            
+            let filteredData = fullHistoryData;
+
+            if (filterType === 'today') {
+                filteredData = fullHistoryData.filter(item => item.timestamp >= startOfToday);
+            } else if (filterType === 'yesterday') {
+                filteredData = fullHistoryData.filter(item => item.timestamp >= startOfYesterday && item.timestamp < startOfToday);
+            } else if (filterType === 'last7days') {
+                filteredData = fullHistoryData.filter(item => item.timestamp >= startOf7DaysAgo);
+            }
+            
+            console.log(`Rendering ${filteredData.length} items for filter "${filterType}".`);
+            renderHistory(filteredData);
+        }
+        
+        filterLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                filterLinks.forEach(l => l.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                const id = e.currentTarget.id;
+                if (id === 'filter-today') applyFilter('today');
+                else if (id === 'filter-yesterday') applyFilter('yesterday');
+                else if (id === 'filter-last-7-days') applyFilter('last7days');
+                else if (id === 'filter-all') applyFilter('all');
+            });
         });
-    });
-        // Request data when the page loads
-        window.electronAPI.getHistoryData();
 
-        // Listen for delete clicks
-        itemList.addEventListener('click', (e) => {
-            if (e.target.classList.contains('delete-button')) {
-                const id = e.target.dataset.id;
-                window.electronAPI.deleteHistoryItem(id);
+        // --- Lógica do Modal ---
+        openClearModalButton.addEventListener('click', () => {
+            clearModal.classList.add('active');
+        });
+
+        closeModalButton.addEventListener('click', () => {
+            clearModal.classList.remove('active');
+        });
+
+        clearModal.addEventListener('click', (e) => {
+            if (e.target === clearModal) {
+                clearModal.classList.remove('active');
             }
         });
 
-        // Listen for refresh requests from main process
-        window.electronAPI.onRefreshData(() => {
-            // A bit of a delay to ensure DB operation is complete
-            setTimeout(() => window.electronAPI.getHistoryData(), 100);
+        // --- Lógica de Exclusão (botões do modal) ---
+        keywordClearButton.addEventListener('click', () => {
+            const keyword = keywordClearInput.value.trim();
+            if (!keyword) return alert('Digite uma palavra-chave.');
+            if (confirm(`Tem certeza que deseja excluir todos os registros contendo "${keyword}"?`)) {
+                window.electronAPI.clearHistoryByKeyword(keyword);
+                keywordClearInput.value = '';
+                clearModal.classList.remove('active');
+            }
         });
+        
+        timeClearButton.addEventListener('click', () => {
+            const value = parseInt(timeClearValue.value, 10);
+            const unit = timeClearUnit.value;
+            const unitText = timeClearUnit.options[timeClearUnit.selectedIndex].text;
+            if (!value || value <= 0) return alert('Insira um número válido.');
+            if (confirm(`Tem certeza que deseja excluir o histórico das últimas ${value} ${unitText}?`)) {
+                window.electronAPI.clearHistoryByTime({ value, unit });
+                clearModal.classList.remove('active');
+            }
+        });
+
+        // --- Demais Listeners ---
+        searchInput.addEventListener('input', (e) => {
+            document.getElementById('filter-all').click();
+            const searchTerm = e.target.value.toLowerCase();
+            const searchedData = fullHistoryData.filter(item => {
+                const title = item.title ? item.title.toLowerCase() : '';
+                const url = item.url.toLowerCase();
+                return title.includes(searchTerm) || url.includes(searchTerm);
+            });
+            renderHistory(searchedData);
+        });
+
+        itemList.addEventListener('click', (e) => {
+            const deleteButton = e.target.closest('.delete-button');
+            if (deleteButton) {
+                e.stopPropagation();
+                window.electronAPI.deleteHistoryItem(deleteButton.dataset.id);
+            }
+            // A lógica para abrir o link em uma nova aba pode ser adicionada aqui
+        });
+        
+        // Carrega os dados e aplica o filtro inicial
+        window.electronAPI.onHistoryData((data) => {
+            fullHistoryData = data;
+            // Mantém o filtro ativo que o usuário selecionou
+            const activeFilter = document.querySelector('.filter-menu a.active');
+            if (activeFilter) activeFilter.click();
+            else document.getElementById('filter-today').click();
+        });
+
+        // Atualiza os dados quando solicitado pelo processo principal
+        window.electronAPI.onRefreshData(() => {
+            setTimeout(() => window.electronAPI.getHistoryData(searchInput.value), 200);
+        });
+
+        // Pede os dados iniciais ao carregar a página
+        window.electronAPI.getHistoryData();
     </script>
 </body>
 </html>

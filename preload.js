@@ -15,10 +15,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Library Page Communication
   openDownloadsPage: () => ipcRenderer.send('open-downloads-page'),
-  getHistoryData: () => ipcRenderer.send('get-history-data'),
+  getHistoryData: (searchTerm) => ipcRenderer.send('get-history-data', searchTerm),
   getFavoritesData: () => ipcRenderer.send('get-favorites-data'),
   getDownloadsData: () => ipcRenderer.send('get-downloads-data'),
   deleteHistoryItem: (id) => ipcRenderer.send('delete-history-item', id),
+  clearHistoryByKeyword: (keyword) => ipcRenderer.send('clear-history-by-keyword', keyword),
+  clearHistoryByTime: (time) => ipcRenderer.send('clear-history-by-time', time),
   deleteFavoriteItem: (id) => ipcRenderer.send('delete-favorite-item', id),
   deleteDownloadItem: (id) => ipcRenderer.send('delete-download-item', id),
   openDownloadFolder: (filePath) => ipcRenderer.send('open-download-folder', filePath),

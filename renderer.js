@@ -93,7 +93,12 @@ window.electronAPI.onFaviconUpdated(({ viewId, faviconUrl }) => {
     const tabEl = tabBar.querySelector(`[data-tab-id="${viewId}"]`);
     if (tabEl) {
         const faviconEl = tabEl.querySelector('.tab-favicon');
+        // Reset display style in case it was hidden from a previous error
+        faviconEl.style.display = 'inline'; 
         faviconEl.src = faviconUrl;
+        faviconEl.onerror = () => {
+            faviconEl.style.display = 'none'; // Hide if it fails to load
+        };
     }
 });
 
@@ -165,6 +170,79 @@ urlBar.addEventListener('keydown', (e) => {
 minimizeButton.addEventListener('click', () => window.electronAPI.minimizeWindow());
 maximizeButton.addEventListener('click', () => window.electronAPI.maximizeWindow());
 closeButton.addEventListener('click', () => window.electronAPI.closeWindow());
+
+
+
+// --- URL Suggestions Logic ---
+const urlSuggestions = document.getElementById('url-suggestions');
+
+function displaySuggestions(suggestions) {
+    console.log('[renderer.js] displaySuggestions called with:', suggestions);
+    urlSuggestions.innerHTML = ''; // Clear previous suggestions
+
+    if (suggestions.length === 0) {
+        urlSuggestions.style.display = 'none';
+        return;
+    }
+
+    suggestions.forEach(suggestion => {
+        const item = document.createElement('div');
+        item.className = 'suggestion-item';
+        item.dataset.url = suggestion.url; // Store URL for click handler
+
+        const title = document.createElement('div');
+        title.className = 'suggestion-title';
+        title.textContent = suggestion.title || 'No Title';
+        
+        const url = document.createElement('div');
+        url.className = 'suggestion-url';
+        url.textContent = suggestion.url;
+
+        item.appendChild(title);
+        item.appendChild(url);
+        urlSuggestions.appendChild(item);
+    });
+
+    urlSuggestions.style.display = 'block';
+}
+
+urlBar.addEventListener('input', async () => {
+    console.log(`[renderer.js] Input event fired. Term: "${urlBar.value.trim()}"`);    
+    const term = urlBar.value.trim();
+    if (term.length === 0) {
+        urlSuggestions.style.display = 'none';
+        return;
+    }
+    const results = await window.electronAPI.searchHistory(term);
+    console.log('[renderer.js] Received results from main process:', results);
+    displaySuggestions(results);
+});
+
+urlBar.addEventListener('blur', () => {
+    // Delay hiding to allow click events on suggestions to register
+    setTimeout(() => {
+        urlSuggestions.style.display = 'none';
+    }, 150);
+});
+
+urlSuggestions.addEventListener('mousedown', (e) => {
+    // Use mousedown to beat the blur event, which would otherwise hide the suggestions
+    const item = e.target.closest('.suggestion-item');
+    if (item) {
+        const url = item.dataset.url;
+        urlBar.value = url;
+        window.electronAPI.loadURL(url);
+    }
+});
+
+// Add a keydown listener to the urlBar to hide suggestions on Enter.
+// This is separate from the existing one that handles navigation.
+urlBar.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        urlSuggestions.style.display = 'none';
+    }
+});
+
 
 // --- Initial State ---
 // The main process will create the first tab for us when the window loads.

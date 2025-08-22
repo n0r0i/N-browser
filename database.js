@@ -87,11 +87,21 @@ function addFavorite(url, title) {
     });
 }
 
-function getHistory() {
+function getHistory(searchTerm = '') {
     return new Promise((resolve, reject) => {
         if (!db) return reject("Database not initialized.");
-        const sql = `SELECT * FROM history ORDER BY timestamp DESC`;
-        db.all(sql, [], (err, rows) => {
+        
+        let sql = `SELECT * FROM history`;
+        const params = [];
+
+        if (searchTerm) {
+            sql += ` WHERE title LIKE ? OR url LIKE ?`;
+            params.push(`%${searchTerm}%`, `%${searchTerm}%`);
+        }
+
+        sql += ` ORDER BY timestamp DESC`;
+
+        db.all(sql, params, (err, rows) => {
             if (err) return reject(err);
             resolve(rows);
         });
@@ -172,6 +182,65 @@ function deleteDownload(id) {
     });
 }
 
+function clearHistoryByKeyword(keyword) {
+    if (!db) return;
+    const sql = `DELETE FROM history WHERE title LIKE ? OR url LIKE ?`;
+    const searchTerm = `%${keyword}%`;
+    db.run(sql, [searchTerm, searchTerm], function(err) {
+        if (err) {
+            return console.error('[DB Error]', err.message);
+        }
+        console.log(`[DB Info] Deleted ${this.changes} history items matching "${keyword}"`);
+    });
+}
+
+function clearHistoryByTime(time) {
+    if (!db) return;
+    const { value, unit } = time;
+    let multiplier = 0;
+    if (unit === 'minutes') multiplier = 60 * 1000;
+    else if (unit === 'hours') multiplier = 60 * 60 * 1000;
+    else if (unit === 'days') multiplier = 24 * 60 * 60 * 1000;
+    else if (unit === 'weeks') multiplier = 7 * 24 * 60 * 60 * 1000;
+    else if (unit === 'months') multiplier = 30 * 24 * 60 * 60 * 1000; // Approximate
+
+    const cutoff = Date.now() - (value * multiplier);
+    const sql = `DELETE FROM history WHERE timestamp >= ?`;
+    db.run(sql, [cutoff], function(err) {
+        if (err) {
+            return console.error('[DB Error]', err.message);
+        }
+        console.log(`[DB Info] Deleted ${this.changes} history items from the last ${value} ${unit}`);
+    });
+}
+
+function searchHistoryForSuggestions(term) {
+    return new Promise((resolve, reject) => {
+        console.log(`[database.js] searchHistoryForSuggestions called with term: "${term}"`);
+        if (!db || !term) {
+            return resolve([]); // Resolve with empty array if no term or db
+        }
+
+        const sql = `
+            SELECT url, title 
+            FROM history 
+            WHERE url LIKE ? OR title LIKE ? 
+            ORDER BY timestamp DESC 
+            LIMIT 10
+        `;
+        const searchTerm = `%${term}%`;
+
+        db.all(sql, [searchTerm, searchTerm], (err, rows) => {
+            if (err) {
+                console.error('[DB Error] Failed to search history suggestions:', err.message);
+                return reject(err);
+            }
+             console.log(`[database.js] Found ${rows.length} suggestions.`);
+            resolve(rows);
+        });
+    });
+}
+
 module.exports = {
     initDb,
     addHistory,
@@ -183,5 +252,8 @@ module.exports = {
     addDownload,
     getDownloads,
     updateDownloadState,
-    deleteDownload
+    deleteDownload,
+    clearHistoryByKeyword,
+    clearHistoryByTime,
+    searchHistoryForSuggestions
 };

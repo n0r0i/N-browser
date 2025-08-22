@@ -174,6 +174,16 @@ class NBrowser {
             database.addHistory(url, title);
         });
 
+        view.webContents.on('did-navigate-in-page', (event, url) => {
+            this.mainWindow.webContents.send('url-updated', { viewId, url });
+            // The title isn't updated immediately in this event, so we wait a moment
+            setTimeout(() => {
+                const title = view.webContents.getTitle();
+                console.log(`[main.js] did-navigate-in-page: view ${viewId} navigated to ${url} with title "${title}".`);
+                database.addHistory(url, title);
+            }, 150); // 150ms delay to allow title to update
+        });
+
         view.webContents.on('context-menu', (e, params) => {
             const menu = Menu.buildFromTemplate([
                 { label: 'Voltar', click: () => view.webContents.goBack(), enabled: view.webContents.canGoBack() },
@@ -272,11 +282,24 @@ class NBrowser {
             });
         });
 
-        ipcMain.on('get-history-data', async (event) => {
-            console.log('[main.js] Received request for history data.');
-            const history = await database.getHistory();
-            console.log(`[main.js] Got ${history.length} history items from DB. Sending to renderer.`);
+        ipcMain.on('get-history-data', async (event, searchTerm) => {
+            const history = await database.getHistory(searchTerm);
             event.sender.send('history-data', history);
+        });
+
+        ipcMain.handle('search-history', async (event, term) => {
+            console.log(`[main.js] IPC handler 'search-history' invoked with term: "${term}"`);
+            if (!term || term.trim() === '') {
+                return [];
+            }
+            try {
+                const suggestions = await database.searchHistoryForSuggestions(term);
+                console.log(`[main.js] Returning ${suggestions.length} suggestions to renderer.`);
+                return suggestions;
+            } catch (error) {
+                console.error('[IPC Error] Failed to search history:', error);
+                return []; // Return empty array on error
+            }
         });
 
         ipcMain.on('get-favorites-data', async (event) => {
@@ -300,6 +323,16 @@ class NBrowser {
 
         ipcMain.on('delete-favorite-item', (event, id) => {
             database.deleteFavorite(id);
+            event.sender.send('refresh-data');
+        });
+
+        ipcMain.on('clear-history-by-keyword', (event, keyword) => {
+            database.clearHistoryByKeyword(keyword);
+            event.sender.send('refresh-data');
+        });
+
+        ipcMain.on('clear-history-by-time', (event, time) => {
+            database.clearHistoryByTime(time);
             event.sender.send('refresh-data');
         });
 

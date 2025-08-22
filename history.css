@@ -1,78 +1,378 @@
-/* General Body Styles */
-body {
-    background-color: #1e1e1e;
-    color: #d4d4d4;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+/* history.css - Layout de 2 colunas com tema escuro */
+
+:root {
+    --bg-main: #1f1f1f;
+    --bg-sidebar: #171717;
+    --bg-header: #2b2b2b;
+    --text-primary: #e8eaed;
+    --text-secondary: #9aa0a6;
+    --accent-color: #8ab4f8;
+    --border-color: #3c4043;
+    --hover-bg-color: #2f2f2f;
+}
+
+* {
     margin: 0;
-    padding: 20px;
-}
-
-h1 {
-    color: #cccccc;
-    font-weight: 300;
-    border-bottom: 1px solid #444;
-    padding-bottom: 10px;
-}
-
-/* Item List Container */
-#item-list {
-    list-style: none;
     padding: 0;
-    margin-top: 20px;
+    box-sizing: border-box;
 }
 
-/* Individual Item Styles */
-#item-list li {
-    background-color: #2a2a2a;
-    border: 1px solid #3a3a3a;
-    border-radius: 8px;
-    margin-bottom: 10px;
-    padding: 15px;
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
+    overflow: hidden; /* Evita barras de rolagem no corpo principal */
+}
+
+.history-layout {
+    display: flex;
+    height: 100vh;
+}
+
+/* --- BARRA LATERAL (SIDEBAR) --- */
+.sidebar {
+    width: 240px;
+    background-color: var(--bg-sidebar);
+    padding: 20px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border-color);
+}
+
+.sidebar h1 {
+    font-size: 1.4em;
+    font-weight: 500;
+    margin-bottom: 30px;
+}
+
+.filter-menu {
+    list-style: none;
+}
+
+.filter-menu a {
+    display: block;
+    padding: 10px 15px;
+    border-radius: 4px;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 0.9em;
+    transition: background-color 0.2s;
+}
+
+.filter-menu a:hover {
+    background-color: var(--hover-bg-color);
+}
+
+.filter-menu a.active {
+    background-color: var(--accent-color);
+    color: var(--bg-main);
+    font-weight: 500;
+}
+
+/* --- CONTEÚDO PRINCIPAL --- */
+.main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+.content-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+    gap: 15px;
+    padding: 15px 25px;
+    background-color: var(--bg-header);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
-#item-list li:hover {
-    background-color: #333333;
-    border-color: #555;
-}
-
-/* Link and Text Styles */
-#item-list li a {
-    color: #87ceeb; /* Sky Blue for links */
-    text-decoration: none;
-    font-size: 16px;
+.search-bar {
+    display: flex;
+    align-items: center;
+    background-color: var(--bg-main);
+    border-radius: 20px;
+    padding: 0 15px;
     flex-grow: 1;
-    min-width: 0;
 }
 
-#item-list li a:hover {
+.search-bar i {
+    color: var(--text-secondary);
+}
+
+#search-input {
+    width: 100%;
+    padding: 10px;
+    font-size: 0.9em;
+    border: none;
+    background: transparent;
+    color: var(--text-primary);
+    outline: none;
+}
+
+.header-button {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    background-color: transparent;
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.85em;
+    white-space: nowrap;
+}
+.header-button:hover {
+    background-color: var(--hover-bg-color);
+}
+.header-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* --- LISTA DE HISTÓRICO --- */
+#item-list {
+    list-style-type: none;
+    overflow-y: auto; /* Barra de rolagem apenas na lista */
+    padding: 15px 25px;
+}
+
+.date-separator {
+    font-size: 1em;
+    font-weight: 500;
+    color: var(--text-primary);
+    padding: 15px 0 10px 0;
+}
+
+#item-list li {
+    display: flex;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 4px;
+    margin-bottom: 2px;
+}
+#item-list li:hover {
+    background-color: var(--hover-bg-color);
+}
+.timestamp {
+    width: 60px;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    flex-shrink: 0; /* Não encolher */
+}
+.item-favicon {
+    width: 16px;
+    height: 16px;
+    margin-right: 12px;
+    flex-shrink: 0; /* Não encolher */
+}
+.item-text-content {
+    flex-grow: 1; /* Make this container take up the available space */
+    min-width: 0; /* CRUCIAL for flexbox to allow shrinking and ellipsis */
+    margin-left: 12px;
+    overflow: hidden; /* Hide anything that still overflows */
+}
+
+.item-text-content a {
+    display: block; /* Make the whole area clickable */
+    white-space: nowrap; /* Keep title and domain on one line */
+    overflow: hidden; /* Hide overflow from the children */
+    text-overflow: ellipsis; /* Add ... if the content is too long */
+    text-decoration: none;
+    font-size: 0.9em;
+    color: var(--text-primary);
+}
+
+.item-text-content a:hover {
     text-decoration: underline;
 }
 
-.timestamp {
-    color: #888888;
-    font-size: 12px;
-    margin: 0 15px;
-    flex-shrink: 0;
-}
+/* The title itself doesn't need special styling unless we want it bold */
+.item-text-content .item-title { }
 
-/* Delete Button */
+/* Style for the domain part of the text */
+.item-text-content .item-domain-text {
+    color: var(--text-secondary);
+}
 .delete-button {
-    background-color: #444;
-    color: #d4d4d4;
-    border: 1px solid #555;
-    border-radius: 5px;
-    padding: 5px 12px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
     cursor: pointer;
-    font-size: 12px;
-    transition: background-color 0.2s, border-color 0.2s;
-    flex-shrink: 0;
+    font-size: 1em;
+    margin-left: 15px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+#item-list li:hover .delete-button {
+    opacity: 1;
+}
+.delete-button:hover {
+    color: #f28b82; /* Vermelho claro */
+}
+/* --- RESPONSIVIDADE --- */
+@media (max-width: 992px) {
+    body {
+        overflow: auto; /* Permite rolagem em telas menores */
+    }
+
+    .history-layout {
+        flex-direction: column; /* Empilha a sidebar e o conteúdo */
+        height: auto;
+    }
+
+    .sidebar {
+        width: 100%;
+        height: auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 15px;
+        border-right: none;
+        border-bottom: 1px solid var(--border-color);
+    }
+
+    .sidebar h1 {
+        margin-bottom: 0;
+        font-size: 1.2em;
+    }
+
+    .filter-menu {
+        display: flex;
+        gap: 10px;
+    }
+
+    .filter-menu a {
+        padding: 6px 10px;
+    }
+
+    .main-content {
+        height: auto;
+    }
+
+    .content-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 15px;
+    }
+
+    #item-list {
+        padding: 15px;
+    }
+
+    .item-domain {
+        width: 120px; /* Reduz a largura do domínio para caber mais título */
+    }
 }
 
-.delete-button:hover {
-    background-color: #c42b1c; /* A modern red */
-    border-color: #e03e3e;
+@media (max-width: 600px) {
+    .item-domain {
+        display: none; /* Em telas muito pequenas, esconde o domínio */
+    }
+    .delete-button {
+        opacity: 1; /* Botão de exclusão sempre visível em telas de toque */
+    }
+}
+
+/* --- MODAL STYLES --- */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: none; /* Hidden by default */
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-backdrop.active {
+    display: flex; /* Shown when active */
+}
+
+.modal-content {
+    background-color: var(--bg-header);
+    padding: 25px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    width: 90%;
+    max-width: 500px;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.modal-header h2 {
+    font-size: 1.2em;
+    font-weight: 500;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 1.8em;
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+
+.modal-body .separator {
+    border: none;
+    height: 1px;
+    background-color: var(--border-color);
+    margin: 20px 0;
+}
+
+.control-group {
+    margin-bottom: 15px;
+}
+
+.control-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.9em;
+    color: var(--text-secondary);
+}
+
+.control-group input, .control-group select {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--bg-main);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 4px;
+    font-size: 1em;
+}
+
+.time-control-group {
+    display: flex;
+    gap: 10px;
+}
+
+.time-control-group input {
+    width: 80px;
+}
+
+.time-control-group select {
+    flex-grow: 1;
+}
+
+.modal-action-button {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 4px;
+    background-color: var(--accent-color);
+    color: var(--bg-main);
+    font-size: 1em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.modal-action-button:hover {
+    opacity: 0.9;
 }
