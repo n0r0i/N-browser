@@ -18,21 +18,23 @@ class NBrowser {
         this.extensions = null; // To hold the extensions instance
         this.uBlockExtension = null; // To hold the uBlock extension object
         this.isUBlockEnabled = true; // To track the state
+        this.browserSession = null; // To hold the session
 
         this._init();
     }
 
     _init() {
         app.whenReady().then(async () => {
-            // Set User Agent for the default session, as suggested by user
-            session.defaultSession.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
+            this.browserSession = session.fromPartition('persist:browser');
 
-            console.log('App Path:', app.getAppPath());
-            this.extensions = new ElectronChromeExtensions();
+            // Set User Agent for the session
+            this.browserSession.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
+
+            this.extensions = new ElectronChromeExtensions({ session: this.browserSession });
 
             try {
                 const uBlockPath = path.join(__dirname, 'ublock-origin');
-                this.uBlockExtension = await session.defaultSession.loadExtension(uBlockPath, { allowFileAccess: true });
+                this.uBlockExtension = await this.browserSession.loadExtension(uBlockPath, { allowFileAccess: true });
                 console.log('uBlock Origin loaded successfully.');
             } catch (error) {
                 console.error('Failed to load uBlock Origin extension:', error);
@@ -48,7 +50,7 @@ class NBrowser {
             });
 
             // Set up download handling using a manual, robust method
-            session.defaultSession.on('will-download', async (event, item, webContents) => {
+            this.browserSession.on('will-download', async (event, item, webContents) => {
                 event.preventDefault();
 
                 const filename = item.getFilename();
@@ -128,6 +130,7 @@ class NBrowser {
                 preload: path.join(__dirname, 'preload.js'),
                 contextIsolation: true,
                 nodeIntegration: false,
+                session: this.browserSession,
             }
         });
 
@@ -437,10 +440,10 @@ class NBrowser {
 
             try {
                 if (this.isUBlockEnabled) {
-                    await session.defaultSession.enableExtension(this.uBlockExtension.id);
+                    await this.browserSession.enableExtension(this.uBlockExtension.id);
                     console.log('uBlock Origin enabled.');
                 } else {
-                    await session.defaultSession.disableExtension(this.uBlockExtension.id);
+                    await this.browserSession.disableExtension(this.uBlockExtension.id);
                     console.log('uBlock Origin disabled.');
                 }
             } catch (error) {
