@@ -33,7 +33,8 @@ class NBrowser {
             this.extensions = new ElectronChromeExtensions({ session: this.browserSession });
 
             try {
-                const uBlockPath = path.join(__dirname, 'ublock-origin');
+                // Hardcoded absolute path based on user logs for debugging.
+                const uBlockPath = 'C:\\Users\\desen\\Downloads\\N-browser\\N-browser-feat-ublock-integration\\ublock-origin';
                 this.uBlockExtension = await this.browserSession.loadExtension(uBlockPath, { allowFileAccess: true });
                 console.log('uBlock Origin loaded successfully.');
             } catch (error) {
