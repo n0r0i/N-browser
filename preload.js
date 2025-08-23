@@ -1,10 +1,15 @@
 const { contextBridge, ipcRenderer } = require('electron');
-const { injectBrowserAction } = require('electron-chrome-extensions/dist/browser-action');
 
-// The main UI is loaded from a file URL, which is where we want to inject the browser action UI
-if (window.location.protocol === 'file:') {
-    injectBrowserAction();
+try {
+    const { injectBrowserAction } = require('electron-chrome-extensions/dist/browser-action');
+    // The main UI is loaded from a file URL, which is where we want to inject the browser action UI
+    if (window.location.protocol === 'file:') {
+        injectBrowserAction();
+    }
+} catch (e) {
+    console.error('Failed to inject browser action UI:', e);
 }
+
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // --- Renderer to Main (Commands) ---
