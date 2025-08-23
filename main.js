@@ -30,11 +30,16 @@ class NBrowser {
             // Set User Agent for the session
             this.browserSession.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
 
-            this.extensions = new ElectronChromeExtensions({ session: this.browserSession });
+            this.extensions = new ElectronChromeExtensions({
+                session: this.browserSession,
+                createTab: this._createTabHandler.bind(this),
+                selectTab: this._selectTabHandler.bind(this),
+                removeTab: this._removeTabHandler.bind(this),
+                createWindow: this._createWindowHandler.bind(this)
+            });
 
             try {
-                // Hardcoded absolute path based on user logs for debugging.
-                const uBlockPath = 'C:\\Users\\desen\\Downloads\\N-browser\\N-browser-feat-ublock-integration\\ublock-origin';
+                const uBlockPath = path.join(__dirname, 'ublock-origin');
                 this.uBlockExtension = await this.browserSession.loadExtension(uBlockPath, { allowFileAccess: true });
                 console.log('uBlock Origin loaded successfully.');
             } catch (error) {
@@ -153,6 +158,43 @@ class NBrowser {
         });
     }
 
+    // --- Extension API Handlers ---
+    async _createTabHandler(details) {
+        const view = this._createNewTab({ url: details.url });
+        return [view.webContents, this.mainWindow];
+    }
+
+    _selectTabHandler(webContents) {
+        // Find the tab ID associated with the webContents
+        for (const [viewId, view] of this.views.entries()) {
+            if (view.webContents === webContents) {
+                this._switchToTab(viewId);
+                break;
+            }
+        }
+    }
+
+    _removeTabHandler(webContents) {
+        for (const [viewId, view] of this.views.entries()) {
+            if (view.webContents === webContents) {
+                this._closeTab(viewId);
+                break;
+            }
+        }
+    }
+
+    async _createWindowHandler(details) {
+        const newWindow = new BrowserWindow({
+            width: 1200,
+            height: 800,
+            webPreferences: { session: this.browserSession }
+        });
+        if (details.url) {
+            newWindow.loadURL(details.url);
+        }
+        return newWindow;
+    }
+
     _updateViewBounds() {
         if (!this.mainWindow || this.mainWindow.isDestroyed() || !this.activeTabId) return;
 
@@ -233,6 +275,8 @@ class NBrowser {
 
         this._switchToTab(viewId);
         this.mainWindow.webContents.send('tab-created', { viewId, title: 'Nova Aba' });
+
+        return view;
     }
 
     _switchToTab(viewId) {
