@@ -300,9 +300,11 @@ class NBrowser {
         if (this.activeTabId === viewId) {
             this.activeTabId = null;
             if (this.views.size > 0) {
-                // Switch to the first available tab
-                const firstViewId = this.views.keys().next().value;
-                this._switchToTab(firstViewId);
+                // Only switch tabs if the window is still alive.
+                if (!this.mainWindow.isDestroyed()) {
+                    const firstViewId = this.views.keys().next().value;
+                    this._switchToTab(firstViewId);
+                }
             } else {
                 // Only create a new tab if the window is not in the process of closing.
                 if (!this.mainWindow.isDestroyed()) {
