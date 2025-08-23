@@ -1,4 +1,5 @@
 const { app, BrowserWindow, BrowserView, ipcMain, session, Menu, protocol, dialog, shell } = require('electron');
+const { ElectronChromeExtensions } = require('electron-chrome-extensions');
 const path = require('node:path');
 const fs = require('node:fs');
 const axios = require('axios');
@@ -14,14 +15,36 @@ class NBrowser {
         this.views = new Map();
         this.activeTabId = null;
         this.isFullscreen = false;
+        this.extensions = null; // To hold the extensions instance
+        this.uBlockExtension = null; // To hold the uBlock extension object
+        this.isUBlockEnabled = true; // To track the state
+        this.browserSession = null; // To hold the session
 
         this._init();
     }
 
     _init() {
         app.whenReady().then(async () => {
-            // Set User Agent for the default session, as suggested by user
-            session.defaultSession.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
+            this.browserSession = session.fromPartition('persist:browser');
+
+            // Set User Agent for the session
+            this.browserSession.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
+
+            this.extensions = new ElectronChromeExtensions({
+                session: this.browserSession,
+                createTab: this._createTabHandler.bind(this),
+                selectTab: this._selectTabHandler.bind(this),
+                removeTab: this._removeTabHandler.bind(this),
+                createWindow: this._createWindowHandler.bind(this)
+            });
+
+            try {
+                const uBlockPath = path.join(__dirname, 'ublock-origin');
+                this.uBlockExtension = await this.browserSession.loadExtension(uBlockPath, { allowFileAccess: true });
+                console.log('uBlock Origin loaded successfully.');
+            } catch (error) {
+                console.error('Failed to load uBlock Origin extension:', error);
+            }
 
             await database.initDb();
 
@@ -33,7 +56,7 @@ class NBrowser {
             });
 
             // Set up download handling using a manual, robust method
-            session.defaultSession.on('will-download', async (event, item, webContents) => {
+            this.browserSession.on('will-download', async (event, item, webContents) => {
                 event.preventDefault();
 
                 const filename = item.getFilename();
@@ -113,6 +136,7 @@ class NBrowser {
                 preload: path.join(__dirname, 'preload.js'),
                 contextIsolation: true,
                 nodeIntegration: false,
+                session: this.browserSession,
             }
         });
 
@@ -132,6 +156,43 @@ class NBrowser {
         this.mainWindow.webContents.once('did-finish-load', () => {
             this._createNewTab();
         });
+    }
+
+    // --- Extension API Handlers ---
+    async _createTabHandler(details) {
+        const view = this._createNewTab({ url: details.url });
+        return [view.webContents, this.mainWindow];
+    }
+
+    _selectTabHandler(webContents) {
+        // Find the tab ID associated with the webContents
+        for (const [viewId, view] of this.views.entries()) {
+            if (view.webContents === webContents) {
+                this._switchToTab(viewId);
+                break;
+            }
+        }
+    }
+
+    _removeTabHandler(webContents) {
+        for (const [viewId, view] of this.views.entries()) {
+            if (view.webContents === webContents) {
+                this._closeTab(viewId);
+                break;
+            }
+        }
+    }
+
+    async _createWindowHandler(details) {
+        const newWindow = new BrowserWindow({
+            width: 1200,
+            height: 800,
+            webPreferences: { session: this.browserSession }
+        });
+        if (details.url) {
+            newWindow.loadURL(details.url);
+        }
+        return newWindow;
     }
 
     _updateViewBounds() {
@@ -156,6 +217,8 @@ class NBrowser {
         const viewId = Date.now().toString();
         const view = new BrowserView({ webPreferences });
         this.views.set(viewId, view);
+
+        this.extensions.addTab(view.webContents, this.mainWindow);
 
         view.webContents.loadURL(url);
 
@@ -212,6 +275,8 @@ class NBrowser {
 
         this._switchToTab(viewId);
         this.mainWindow.webContents.send('tab-created', { viewId, title: 'Nova Aba' });
+
+        return view;
     }
 
     _switchToTab(viewId) {
@@ -408,6 +473,31 @@ class NBrowser {
                     this.menuWindow.close();
                 }
             });
+        });
+
+        ipcMain.handle('toggle-ublock', async () => {
+            if (!this.uBlockExtension) {
+                console.error("uBlock extension not loaded.");
+                return this.isUBlockEnabled;
+            }
+
+            this.isUBlockEnabled = !this.isUBlockEnabled; // Toggle the state
+
+            try {
+                if (this.isUBlockEnabled) {
+                    await this.browserSession.enableExtension(this.uBlockExtension.id);
+                    console.log('uBlock Origin enabled.');
+                } else {
+                    await this.browserSession.disableExtension(this.uBlockExtension.id);
+                    console.log('uBlock Origin disabled.');
+                }
+            } catch (error) {
+                console.error('Failed to toggle uBlock Origin:', error);
+                // Revert state on error
+                this.isUBlockEnabled = !this.isUBlockEnabled;
+            }
+
+            return this.isUBlockEnabled;
         });
     }
 }
