@@ -26,6 +26,7 @@ class NBrowser {
 
             this.extensions = new ElectronChromeExtensions({
                 session: browserSession,
+                license: 'GPL-3.0',
                 createTab: async (details) => {
                     const { view, viewId } = this._createNewTab({ url: details.url });
                     return [view.webContents, this.mainWindow];
