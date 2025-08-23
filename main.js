@@ -1,9 +1,9 @@
-const { app, BrowserWindow, BrowserView, ipcMain, session, Menu, protocol, dialog, shell } = require('electron');
+const { app, BrowserWindow, BrowserView, ipcMain, session, Menu, dialog, shell } = require('electron');
 const path = require('node:path');
 const fs = require('node:fs');
 const axios = require('axios');
+const { ElectronChromeExtensions } = require('electron-chrome-extensions');
 
-// Custom protocol removed for stability. Will revert to file://
 require('events').EventEmitter.defaultMaxListeners = 20; // Suppress MaxListenersExceededWarning
 const database = require('./database.js');
 
@@ -14,26 +14,56 @@ class NBrowser {
         this.views = new Map();
         this.activeTabId = null;
         this.isFullscreen = false;
+        this.extensions = null;
 
         this._init();
     }
 
     _init() {
         app.whenReady().then(async () => {
-            // Set User Agent for the default session, as suggested by user
-            session.defaultSession.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
+            const browserSession = session.fromPartition('persist:browser');
+            browserSession.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
+
+            this.extensions = new ElectronChromeExtensions({
+                session: browserSession,
+                createTab: async (details) => {
+                    const { view, viewId } = this._createNewTab({ url: details.url });
+                    return [view.webContents, this.mainWindow];
+                },
+                selectTab: (webContents, browserWindow) => {
+                    for (const [viewId, view] of this.views.entries()) {
+                        if (view.webContents === webContents) {
+                            this._switchToTab(viewId);
+                            break;
+                        }
+                    }
+                },
+                removeTab: (webContents, browserWindow) => {
+                    for (const [viewId, view] of this.views.entries()) {
+                        if (view.webContents === webContents) {
+                            this._closeTab(viewId);
+                            break;
+                        }
+                    }
+                },
+            });
 
             await database.initDb();
 
             this._createWindow();
             this._setupIpcListeners();
 
+            try {
+                await browserSession.loadExtension(path.join(__dirname, 'ublock-origin'));
+            } catch (e) {
+                console.error('Failed to load extension', e);
+            }
+
             app.on('activate', () => {
                 if (BrowserWindow.getAllWindows().length === 0) this._createWindow();
             });
 
-            // Set up download handling using a manual, robust method
-            session.defaultSession.on('will-download', async (event, item, webContents) => {
+            browserSession.on('will-download', async (event, item, webContents) => {
                 event.preventDefault();
 
                 const filename = item.getFilename();
@@ -47,7 +77,7 @@ class NBrowser {
                     });
 
                     if (canceled || !filePath) {
-                        return; // User cancelled the dialog
+                        return;
                     }
 
                     this.mainWindow.webContents.send('download-progress', { filename, progress: 0 });
@@ -68,7 +98,6 @@ class NBrowser {
                         this.mainWindow.webContents.send('download-progress', { filename, progress });
                     });
 
-                    // Add to database immediately with 'progressing' state
                     database.addDownload({
                         filename: filename,
                         url: url,
@@ -82,14 +111,14 @@ class NBrowser {
                     writer.on('finish', () => {
                         this.mainWindow.webContents.send('download-complete', { filename, state: 'completed' });
                         database.updateDownloadState(filename, 'completed');
-                        this.mainWindow.webContents.send('refresh-data'); // Tell pages to refresh
+                        this.mainWindow.webContents.send('refresh-data');
                     });
 
                     writer.on('error', (err) => {
                         console.error('File write error:', err);
                         this.mainWindow.webContents.send('download-complete', { filename, state: 'interrupted' });
                         database.updateDownloadState(filename, 'interrupted');
-                        this.mainWindow.webContents.send('refresh-data'); // Tell pages to refresh
+                        this.mainWindow.webContents.send('refresh-data');
                     });
 
                 } catch (err) {
@@ -113,6 +142,7 @@ class NBrowser {
                 preload: path.join(__dirname, 'preload.js'),
                 contextIsolation: true,
                 nodeIntegration: false,
+                session: session.fromPartition('persist:browser'),
             }
         });
 
@@ -128,7 +158,6 @@ class NBrowser {
             this.mainWindow.webContents.send('window-state-changed', 'normal');
         });
 
-        // Create the first tab once the UI is ready
         this.mainWindow.webContents.once('did-finish-load', () => {
             this._createNewTab();
         });
@@ -153,9 +182,18 @@ class NBrowser {
     _createNewTab(options = {}) {
         const { url = 'https://www.google.com', title = 'Nova Aba', webPreferences = {} } = options;
 
+        const browserSession = session.fromPartition('persist:browser');
         const viewId = Date.now().toString();
-        const view = new BrowserView({ webPreferences });
+        const view = new BrowserView({
+            webPreferences: {
+                ...webPreferences,
+                session: browserSession,
+                contextIsolation: true,
+            }
+        });
         this.views.set(viewId, view);
+
+        this.extensions.addTab(view.webContents, this.mainWindow);
 
         view.webContents.loadURL(url);
 
@@ -176,26 +214,27 @@ class NBrowser {
 
         view.webContents.on('did-navigate-in-page', (event, url) => {
             this.mainWindow.webContents.send('url-updated', { viewId, url });
-            // The title isn't updated immediately in this event, so we wait a moment
             setTimeout(() => {
                 const title = view.webContents.getTitle();
                 console.log(`[main.js] did-navigate-in-page: view ${viewId} navigated to ${url} with title "${title}".`);
                 database.addHistory(url, title);
-            }, 150); // 150ms delay to allow title to update
+            }, 150);
         });
 
         view.webContents.on('context-menu', (e, params) => {
+            const menuItems = this.extensions.getContextMenuItems(view.webContents, params);
             const menu = Menu.buildFromTemplate([
                 { label: 'Voltar', click: () => view.webContents.goBack(), enabled: view.webContents.canGoBack() },
                 { label: 'Avançar', click: () => view.webContents.goForward(), enabled: view.webContents.canGoForward() },
                 { label: 'Recarregar', click: () => view.webContents.reload() },
+                { type: 'separator' },
+                ...menuItems,
                 { type: 'separator' },
                 { label: 'Inspecionar', click: () => view.webContents.openDevTools({ mode: 'undocked' }) }
             ]);
             menu.popup({ window: this.mainWindow });
         });
 
-        // Handle HTML5 fullscreen API
         view.webContents.on('enter-html-full-screen', () => {
             this.isFullscreen = true;
             this.mainWindow.setFullScreen(true);
@@ -212,6 +251,8 @@ class NBrowser {
 
         this._switchToTab(viewId);
         this.mainWindow.webContents.send('tab-created', { viewId, title: 'Nova Aba' });
+
+        return { view, viewId };
     }
 
     _switchToTab(viewId) {
@@ -223,7 +264,8 @@ class NBrowser {
         this.mainWindow.setBrowserView(view);
         this._updateViewBounds();
 
-        // Notify the renderer that the active tab has changed
+        this.extensions.selectTab(view.webContents);
+
         this.mainWindow.webContents.send('tab-switched', viewId);
 
         const url = view.webContents.getURL();
@@ -246,7 +288,6 @@ class NBrowser {
                 const firstViewId = this.views.keys().next().value;
                 this._switchToTab(firstViewId);
             } else {
-                // If all tabs are closed, maybe create a new one or close the window
                 this._createNewTab();
             }
         }

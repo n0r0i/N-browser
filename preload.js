@@ -1,4 +1,38 @@
 const { contextBridge, ipcRenderer } = require('electron');
+const { injectBrowserAction } = require('electron-chrome-extensions/dist/browser-action');
+
+process.once('loaded', () => {
+  const anuraProvider = {
+    send: (channel, ...args) => {
+      let resolve, reject;
+      const promise = new Promise((res, rej) => {
+        resolve = res;
+        reject = rej;
+      });
+      ipcRenderer.once(channel, (event, ...args) => {
+        if (args[0] instanceof Error) {
+          reject(args[0]);
+        } else {
+          resolve(args[0]);
+        }
+      });
+      ipcRenderer.send(channel, ...args);
+      return promise;
+    },
+    on: (channel, listener) => {
+      ipcRenderer.on(channel, listener);
+    },
+    off: (channel, listener) => {
+      ipcRenderer.removeListener(channel, listener);
+    },
+    invoke: ipcRenderer.invoke,
+  };
+  contextBridge.exposeInMainWorld("anura", anuraProvider);
+});
+
+if (location.href === 'about:newtab' || location.href.startsWith("file://")) {
+  injectBrowserAction();
+}
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // --- Renderer to Main (Commands) ---
