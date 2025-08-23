@@ -55,7 +55,7 @@ class NBrowser {
             this._setupIpcListeners();
 
             try {
-                await browserSession.extensions.load(path.join(__dirname, 'ublock-origin'));
+                await browserSession.extensions.loadExtension(path.join(__dirname, 'ublock-origin'));
             } catch (e) {
                 console.error('Failed to load extension', e);
             }
