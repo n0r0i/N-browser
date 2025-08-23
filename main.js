@@ -274,22 +274,39 @@ class NBrowser {
     }
 
     _closeTab(viewId) {
-        if (!this.views.has(viewId)) return;
+        // If the view is already gone from our map, it's already being handled or closed.
+        if (!this.views.has(viewId)) {
+            return;
+        }
 
         const view = this.views.get(viewId);
-        if (this.mainWindow.getBrowserView() === view) {
-            this.mainWindow.removeBrowserView(view);
-        }
-        view.webContents.destroy();
+
+        // Remove from map immediately to prevent re-entrant calls.
         this.views.delete(viewId);
 
+        // Check if the main window and the view's webContents are still alive before acting on them.
+        if (!this.mainWindow.isDestroyed()) {
+            if (this.mainWindow.getBrowserView() === view) {
+                this.mainWindow.removeBrowserView(view);
+            }
+        }
+
+        if (!view.webContents.isDestroyed()) {
+            view.webContents.destroy();
+        }
+
+        // Handle switching to a new tab if the closed tab was the active one.
         if (this.activeTabId === viewId) {
             this.activeTabId = null;
             if (this.views.size > 0) {
+                // Switch to the first available tab
                 const firstViewId = this.views.keys().next().value;
                 this._switchToTab(firstViewId);
             } else {
-                this._createNewTab();
+                // Only create a new tab if the window is not in the process of closing.
+                if (!this.mainWindow.isDestroyed()) {
+                    this._createNewTab();
+                }
             }
         }
     }
