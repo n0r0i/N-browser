@@ -30,6 +30,18 @@ class NBrowser {
             // Set User Agent for the session
             this.browserSession.setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36");
 
+            try {
+                console.log('Attempting to manually read package.json...');
+                const appPath = app.getAppPath();
+                const packageJsonPath = path.join(appPath, "package.json");
+                console.log(`Reading from path: ${packageJsonPath}`);
+                const rawData = fs.readFileSync(packageJsonPath, "utf-8");
+                const pkg = JSON.parse(rawData);
+                console.log(`Manually parsed license: ${pkg.license}`);
+            } catch (error) {
+                console.error('Manual parse failed:', error);
+            }
+
             this.extensions = new ElectronChromeExtensions({ session: this.browserSession });
 
             try {
