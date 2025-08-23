@@ -51,15 +51,16 @@ class NBrowser {
 
             await database.initDb();
 
-            this._createWindow();
-            this._setupIpcListeners();
-
+            // Load the extension before creating the window to avoid race conditions
             try {
                 const extension = await browserSession.loadExtension(path.join(__dirname, 'ublock-origin'));
                 console.log(`Extension loaded: ${extension.name} (v${extension.version})`);
             } catch (e) {
                 console.error('Failed to load extension', e);
             }
+
+            this._createWindow();
+            this._setupIpcListeners();
 
             app.on('activate', () => {
                 if (BrowserWindow.getAllWindows().length === 0) this._createWindow();
